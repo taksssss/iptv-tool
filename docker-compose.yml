@@ -2,28 +2,28 @@ services:
   php-epg:
     image: taksss/php-epg:latest
     container_name: php-epg
-    # 数据持久化
+    # 数据目录映射
     volumes:
-      - ./epg/data:/htdocs/data
-    # 默认端口5678
+      - /etc/epg:/htdocs/data
+    # 默认端口 5678
     ports:
       - "5678:80"
     depends_on:
       - mysql
       - phpmyadmin
-    restart: always
+    restart: unless-stopped 
 
   mysql:
     image: mysql:8.0
     container_name: mysql
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root_password
       MYSQL_DATABASE: phpepg
       MYSQL_USER: phpepg
       MYSQL_PASSWORD: phpepg
-    ports:
-      - "3306:3306"
-    restart: always
+    restart: unless-stopped 
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
@@ -35,3 +35,4 @@ services:
       PMA_PORT: 3306
     depends_on:
       - mysql
+    restart: unless-stopped 

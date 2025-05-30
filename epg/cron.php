@@ -132,11 +132,22 @@ $db->commit();
 // 首先等待到下一个执行时间
 sleep($initial_sleep);
 
+// 初始化计数器
+$check_counter = 0;
+
 // 无限循环，可以使用实际需求中的退出条件
 while (true) {
     // 执行update.php
-    exec('php ' . __DIR__ . '/update.php');
-    logCronMessage("【成功执行】 update.php");
+    exec('php ' . __DIR__ . '/update.php &');
+    logCronMessage("【成功执行】 update.php (" . ++$check_counter . ")");
+
+    // 判断是否同步测速校验
+    $Config = json_decode(@file_get_contents(__DIR__ . '/data/config.json'), true);
+    $check_interval_factor = $Config['check_speed_interval_factor'] ?? 1;
+    if (($Config['check_speed_auto_sync'] ?? false) && ($check_counter % $check_interval_factor === 0)) {
+        exec('php ' . __DIR__ . '/check.php backgroundMode=1 > /dev/null 2>/dev/null &');
+        logCronMessage("【测速校验】 已在后台运行 (" . ($check_counter / $check_interval_factor) . ")");
+    }
 
     // 计算下一个执行时间
     $current_time = time();

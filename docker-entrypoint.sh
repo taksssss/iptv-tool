@@ -9,8 +9,23 @@ HTTPS_SERVER_NAME="${HTTPS_SERVER_NAME:-www.example.com}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 TZ="${TZ:-Asia/Shanghai}"
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-512M}"
+ENABLE_FFMPEG="${ENABLE_FFMPEG:-false}"
 
 echo 'Updating configurations'
+
+# Check and install ffmpeg if ENABLE_FFMPEG is set to true
+if [ "$ENABLE_FFMPEG" = "true" ]; then
+    echo "Using USTC mirror for package installation..."
+    sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+    if ! apk info ffmpeg > /dev/null 2>&1; then
+        echo "Installing ffmpeg..."
+        apk add --no-cache ffmpeg
+    else
+        echo "ffmpeg is already installed."
+    fi
+else
+    echo "Skipping ffmpeg installation."
+fi
 
 # Check if the required configuration is already present
 if ! grep -q "# Directory Listing Disabled" /etc/apache2/httpd.conf; then
@@ -20,11 +35,6 @@ cat <<EOF >> /etc/apache2/httpd.conf
     Options -Indexes
     AllowOverride All
     Require all granted
-
-    # Enable mod_rewrite for compatibility
-    RewriteEngine On
-    RewriteCond %{REQUEST_URI} ^/epg/?(.*)\$ 
-    RewriteRule ^epg/?(.*)\$ /\$1 [L,R=301]
 </Directory>
 
 # Block access to /htdocs/data except for /htdocs/data/icon
@@ -76,11 +86,11 @@ ln -s /usr/share/zoneinfo/${TZ} /etc/localtime
 
 echo 'Running cron.php and Apache'
 
-# Change ownership of /htdocs/
-chown -R apache:apache /htdocs/
+# Change ownership of /htdocs
+chown -R apache:apache /htdocs
 
 # Start cron.php
-cd /htdocs/
+cd /htdocs
 su -s /bin/sh -c "php cron.php &" "apache"
 
 # Remove stale PID file

@@ -54,9 +54,6 @@ jobs:
 
       - name: Process files
         run: |
-          # 包含 CHANGELOG.md
-          cp CHANGELOG.md epg/assets/CHANGELOG.md
-          
           VERSION=$(TZ="Asia/Shanghai" date +"v%Y.%m.%d")  # 获取北京时间，并转换为 v2024.11.24 格式
 
           # 更新 manage.html

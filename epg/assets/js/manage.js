@@ -1,8 +1,8 @@
 // 页面加载时预加载数据，减少等待时间
 document.addEventListener('DOMContentLoaded', function() {
-    showModal('live', $popup = false);
-    showModal('channel', $popup = false);
-    showModal('update', $popup = false);
+    showModal('live', popup = false);
+    showModal('channel', popup = false);
+    showModal('update', popup = false);
     showVersionLog(doCheckUpdate = true);
 });
 
@@ -10,9 +10,13 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('settingsForm').addEventListener('submit', function(event) {
     event.preventDefault();  // 阻止默认表单提交
 
-    const fields = ['update_config', 'gen_xml', 'include_future_only', 'ret_default', 'tvmao_default', 
-        'all_chs', 'db_type', 'mysql_host', 'mysql_dbname', 'mysql_username', 'mysql_password', 
-        'gen_list_enable', 'check_update', 'token_range'];
+    const fields = ['update_config', 'gen_xml', 'include_future_only', 'ret_default', 'cht_to_chs', 
+        'db_type', 'mysql_host', 'mysql_dbname', 'mysql_username', 'mysql_password', 'gen_list_enable', 
+        'check_update', 'token_range', 'user_agent_range', 'debug_mode', 'live_template_enable', 
+        'live_fuzzy_match', 'live_url_comment', 'live_tvg_logo_enable', 'live_tvg_id_enable', 
+        'live_tvg_name_enable', 'live_source_auto_sync', 'live_channel_name_process', 'gen_live_update_time', 
+        'm3u_icon_first', 'check_ipv6', 'min_resolution_width', 'min_resolution_height', 'urls_limit','sort_by_delay', 
+        'check_speed_auto_sync', 'check_speed_interval_factor'];
 
     // 创建隐藏字段并将其添加到表单
     const form = this;
@@ -158,27 +162,27 @@ function updateMySQLFields() {
 
 // 显示带消息的模态框
 function showModalWithMessage(modalId, messageId = '', message = '') {
-    if (messageId) {
-        document.getElementById(messageId).innerHTML = message;
-    }
-    
-    var modal = document.getElementById(modalId);
-    modal.style.zIndex = zIndex++; // 确保在最上层
+    const modal = document.getElementById(modalId);
+    if (messageId) document.getElementById(messageId).innerHTML = message;
+
+    modal.style.zIndex = zIndex++;
     modal.style.display = "block";
 
-    var originalOnMouseDown = window.onmousedown;
-    function handleModalClose() {
-        modal.style.display = "none";
-        window.onmousedown = originalOnMouseDown; // 恢复原事件
-    }
+    const closeBtn = modal.querySelector(".close");
+    closeBtn.onmousedown = () => modal.style.display = "none";
 
-    var closeBtn = modal.querySelector(".close");
-    closeBtn.onmousedown = handleModalClose;
-    window.onmousedown = function(event) {
+    // 处理点击模态框外部关闭
+    const handleClickOutside = (event) => {
         if (event.target === modal) {
-            handleModalClose();
+            modal.style.display = "none";
+            window.removeEventListener('mousedown', handleClickOutside); // 关闭后移除事件监听器
         }
     };
+
+    window.addEventListener('mousedown', handleClickOutside);
+
+    // 阻止点击模态框内部时关闭
+    modal.querySelector('.modal-content').addEventListener('mousedown', (e) => e.stopPropagation());
 }
 
 // 显示消息模态框
@@ -188,19 +192,19 @@ function showMessageModal(message) {
 
 let zIndex = 100;
 // 显示模态框公共函数
-function showModal(type, $popup = true, $data = '') {
+function showModal(type, popup = true, data = '') {
     var modal, logSpan, logContent;
     switch (type) {
         case 'epg':
             modal = document.getElementById("epgModal");
-            fetchData("manage.php?get_epg_by_channel=true&channel=" + encodeURIComponent($data.channel) + "&date=" + $data.date, updateEpgContent);
+            fetchData("manage.php?get_epg_by_channel=true&channel=" + encodeURIComponent(data.channel) + "&date=" + data.date, updateEpgContent);
 
             // 更新日期的点击事件
             const updateDate = function(offset) {
                 const currentDate = new Date(document.getElementById("epgDate").innerText);
                 currentDate.setDate(currentDate.getDate() + offset);
                 const newDateString = currentDate.toISOString().split('T')[0];
-                fetchData(`manage.php?get_epg_by_channel=true&channel=${encodeURIComponent($data.channel)}&date=${newDateString}`, updateEpgContent);
+                fetchData(`manage.php?get_epg_by_channel=true&channel=${encodeURIComponent(data.channel)}&date=${newDateString}`, updateEpgContent);
                 document.getElementById("epgDate").innerText = newDateString;
             };
 
@@ -242,6 +246,12 @@ function showModal(type, $popup = true, $data = '') {
             modal = document.getElementById("liveSourceManageModal");
             fetchData('manage.php?get_live_data=true', updateLiveSourceModal);
             break;
+        case 'chekspeed':
+            modal = document.getElementById("checkSpeedModal");
+            break;
+        case 'morelivesetting':
+            modal = document.getElementById("moreLiveSettingModal");
+            break;
         case 'moresetting':
             updateMySQLFields(); // 设置 MySQL 相关输入框状态
             document.getElementById('db_type').addEventListener('change', updateMySQLFields);
@@ -252,7 +262,7 @@ function showModal(type, $popup = true, $data = '') {
             console.error('Unknown type:', type);
             break;
     }
-    if (!$popup) {
+    if (!popup) {
         return;
     }
     modal.style.zIndex = zIndex++; // 确保 modal 在最上层
@@ -283,6 +293,56 @@ function fetchData(endpoint, callback) {
         });
 }
 
+// 显示 update.php、check.php 执行结果
+function showExecResult(fileName, callback, fullSize = true) {
+    
+    showMessageModal('');
+    const messageContainer = document.getElementById('messageModalMessage');
+
+    // 清空 messageContainer，避免内容重复
+    messageContainer.innerHTML = '';
+
+    const wrapper = document.createElement('div');
+    if (fullSize) {
+        wrapper.style.width = '930px';
+        wrapper.style.height = '504px';
+    } else {
+        wrapper.style.maxWidth = '600px';
+    }
+    wrapper.style.overflow = 'auto';
+    messageContainer.appendChild(wrapper);
+
+    // 创建 XMLHttpRequest 对象
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `${fileName}`, true);
+
+    // 显式设置 X-Requested-With 请求头
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+    // 处理接收到的数据
+    xhr.onprogress = function () {
+        wrapper.innerHTML = xhr.responseText;
+        wrapper.scrollTop = wrapper.scrollHeight;
+    };
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            // 确保执行完成后调用回调
+            if (typeof callback === 'function') {
+                callback();
+            }
+        } else {
+            wrapper.innerHTML += '<p>检测失败，请检查服务器。</p>';
+        }
+    };
+
+    xhr.onerror = function () {
+        wrapper.innerHTML += '<p>请求出错，请检查网络连接。</p>';
+    };
+
+    xhr.send();
+}
+
 // 显示版本更新日志
 function showVersionLog(doCheckUpdate = false) {
     fetch(`manage.php?get_version_log=true&do_check_update=${doCheckUpdate}`)
@@ -303,7 +363,24 @@ function showVersionLog(doCheckUpdate = false) {
 
 // 显示使用说明
 function showHelpModal() {
-    showModalWithMessage("helpModal");
+    fetch("manage.php?get_readme_content=true")
+        .then(response => response.json())
+        .then(data => {
+            showModalWithMessage("helpModal", "helpMessage", data.content);
+        });
+}
+
+// 显示捐赠图片
+function showDonationImage() {
+    const isDark = document.body.classList.contains('dark');
+    const img = isDark ? 'assets/img/buymeacofee-dark.png' : 'assets/img/buymeacofee.png';
+
+    showMessageModal('');
+    messageModalMessage.innerHTML = `
+        <img src="${img}" style="max-width:100%; display:block; margin: 0 auto; margin-top:55px;">
+        <p style="margin-top:10px; text-align:center;">感谢鼓励！</p>
+    `;
+
 }
 
 // 更新 EPG 内容
@@ -344,6 +421,64 @@ function updateCronLogContent(logData) {
         })}] ${log.log_message}`)
     .join('\n');
     logContent.scrollTop = logContent.scrollHeight;
+}
+
+// 显示访问日志
+function showAccessLogModal() {
+    const box = document.getElementById("accessLogContent");
+    const modal = document.getElementById("accesslogModal");
+    let last = "", timer;
+
+    const load = () => fetch("manage.php?get_access_log=true")
+        .then(r => r.json())
+        .then(d => {
+            logcontent = "<pre>" + d.content + "持续刷新中...</pre>";
+            if (logcontent !== last) {
+                last = logcontent;
+                const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
+                box.innerHTML = logcontent;
+                if (atBottom) box.scrollTop = box.scrollHeight;
+            }
+        });
+
+    modal.style.zIndex = zIndex++;
+    modal.style.display = "block";
+    load();
+    timer = setInterval(load, 1000);
+
+    modal.onclick = e => {
+        if (e.target === modal || e.target.classList.contains("close")) {
+            modal.style.display = "none";
+            clearInterval(timer);
+        }
+    };
+}
+
+// 清空访问日志
+function clearAccessLog() {
+    if (!confirm('确定清空访问日志？')) return;
+    fetch('manage.php?clear_access_log=true')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('日志已清空');
+                document.getElementById('accessLogContent').innerHTML = '';
+            } else alert('清空失败');
+        }).catch(() => alert('请求失败'));
+}
+
+// 下载访问日志
+function downloadAccessLog() {
+    fetch('manage.php?get_access_log=true')
+        .then(res => res.json())
+        .then(data => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([data.content], {type:'text/plain'}));
+            a.download = 'access.log';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        })
+        .catch(() => alert('下载失败'));
 }
 
 // 显示频道别名列表
@@ -440,12 +575,13 @@ function displayPage(data, page) {
     const end = Math.min(start + rowsPerPage, data.length);
 
     if (data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9">暂无数据</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="11">暂无数据</td></tr>';
         return;
     }
 
     // 列索引和对应字段的映射
-    const columns = ['groupTitle', 'channelName', 'streamUrl', 'iconUrl', 'tvgId', 'tvgName', 'disable', 'modified'];
+    const columns = ['groupTitle', 'channelName', 'streamUrl', 'iconUrl', 'tvgId', 
+                    'tvgName', 'resolution', 'speed', 'disable', 'modified'];
 
     // 填充当前页的表格数据
     data.slice(start, end).forEach((item, index) => {
@@ -467,7 +603,7 @@ function displayPage(data, page) {
                         : 'table-cell-clickable';
                 }
 
-                const editable = ['disable', 'modified'].includes(col) ? '' : 'contenteditable="true"';
+                const editable = ['resolution', 'speed', 'disable', 'modified'].includes(col) ? '' : 'contenteditable="true"';
                 const clickableClass = (col === 'disable' || col === 'modified') ? 'table-cell-clickable' : '';
 
                 return `<td ${editable} class="${clickableClass} ${cellClass}">
@@ -479,10 +615,11 @@ function displayPage(data, page) {
         // 为每个单元格添加事件监听器
         row.querySelectorAll('td[contenteditable="true"]').forEach((cell, columnIndex) => {
             cell.addEventListener('input', () => {
-                const dataIndex = (currentPage - 1) * rowsPerPage + index;
+                const currentIndex = (currentPage - 1) * rowsPerPage + index;
+                const item = filteredLiveData[currentIndex]; // 当前点击的数据
+                const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
                 if (dataIndex < allLiveData.length) {
                     allLiveData[dataIndex][columns[columnIndex]] = cell.textContent.trim();
-                    
                     allLiveData[dataIndex]['modified'] = 1; // 标记修改位
                     const lastCell = cell.closest('tr').lastElementChild;
                     lastCell.textContent = '是';
@@ -494,7 +631,9 @@ function displayPage(data, page) {
         // 为 disable 和 modified 列添加点击事件，切换 "是/否"
         row.querySelectorAll('td.table-cell-clickable').forEach((cell, columnIndex) => {
             cell.addEventListener('click', () => {
-                const dataIndex = (currentPage - 1) * rowsPerPage + index;
+                const currentIndex = (currentPage - 1) * rowsPerPage + index;
+                const item = filteredLiveData[currentIndex]; // 当前点击的数据
+                const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
                 if (dataIndex < allLiveData.length) {
                     const isDisable = columnIndex === 0;
                     const field = isDisable ? 'disable' : 'modified';
@@ -525,7 +664,6 @@ function setupPagination(data) {
     paginationContainer.innerHTML = ''; // 清空分页容器
 
     const totalPages = Math.ceil(data.length / rowsPerPage);
-    document.getElementById('live-source-table-container').style.height = totalPages <= 1 ? "410px" : "375px";
     if (totalPages <= 1) return;
 
     const maxButtons = 11; // 总显示按钮数，包括“<”和“>”
@@ -568,8 +706,35 @@ function setupPagination(data) {
 }
 
 let currentPage = 1; // 当前页码
-const rowsPerPage = 100; // 每页显示的行数
 let allLiveData = []; // 用于存储直播源数据
+let filteredLiveData = []; // 搜索后的结果
+
+let rowsPerPage = parseInt(localStorage.getItem('rowsPerPage')) || 100; // 每页显示的行数
+document.getElementById('rowsPerPageSelect').value = rowsPerPage;
+
+// 更改每页显示条数
+document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => {
+    rowsPerPage = parseInt(e.target.value);
+    localStorage.setItem('rowsPerPage', rowsPerPage);
+    currentPage = 1; // 重置到第一页
+    displayPage(filteredLiveData, currentPage);
+    setupPagination(filteredLiveData);
+});
+
+// 根据关键词过滤数据
+function filterLiveSourceData() {
+    const keyword = document.getElementById('liveSourceSearchInput').value.trim().toLowerCase();
+    filteredLiveData = allLiveData.filter(item =>
+        (item.channelName || '').toLowerCase().includes(keyword) ||
+        (item.groupTitle || '').toLowerCase().includes(keyword) ||
+        (item.streamUrl || '').toLowerCase().includes(keyword) ||
+        (item.tvgId || '').toLowerCase().includes(keyword) ||
+        (item.tvgName || '').toLowerCase().includes(keyword)
+    );
+    currentPage = 1;
+    displayPage(filteredLiveData, currentPage);
+    setupPagination(filteredLiveData);
+}
 
 // 更新模态框内容并初始化分页
 function updateLiveSourceModal(data) {
@@ -577,6 +742,7 @@ function updateLiveSourceModal(data) {
     document.getElementById('liveTemplateTextarea').value = data.template_content || '';
     const channels = Array.isArray(data.channels) ? data.channels : [];
     allLiveData = channels;  // 将所有数据保存在全局变量中
+    filteredLiveData = allLiveData; // 初始化过滤结果
     currentPage = 1; // 重置为第一页
     displayPage(channels, currentPage); // 显示第一页数据
     setupPagination(channels); // 初始化分页控件
@@ -612,22 +778,11 @@ document.getElementById('liveSourceFile').addEventListener('change', function() 
     this.value = ''; // 重置文件输入框的值，确保可以连续上传相同文件
 });
 
-// 设置直播源自动同步、优化频道名开关
-function toggleStatus(toggleBtn) {
-    fetch(`manage.php?toggle_status=true&toggle_button=${toggleBtn}`)
-        .then(response => response.json())
-        .then(data => {
-            // 更新按钮显示
-            document.getElementById(toggleBtn).innerHTML = 
-                `${toggleBtn === "toggleLiveSourceSyncBtn" ? "同步" : "改名"}: ${data.status === 1 ? "是" : "否"}`;
-        })
-        .catch(error => console.error("Error:", error));
-}
-
 // 保存编辑后的直播源地址
-document.getElementById('sourceUrlTextarea').addEventListener('blur', function() {
-    const sourceContent = this.value.replace(/^\s*[\r\n]+/gm, '').replace(/\n$/, '');
-    this.value = sourceContent;
+function saveLiveSourceFile() {
+    source = document.getElementById('sourceUrlTextarea');
+    const sourceContent = source.value.replace(/^\s*[\r\n]+/gm, '').replace(/\n$/, '');
+    source.value = sourceContent;
 
     // 内容写入 source.txt 文件
     fetch('manage.php', {
@@ -642,26 +797,85 @@ document.getElementById('sourceUrlTextarea').addEventListener('blur', function()
     .catch(error => {
         showMessageModal('保存失败: ' + error);
     });
-});
+}
+
+document.getElementById('sourceUrlTextarea').addEventListener('blur', saveLiveSourceFile);
 
 // 保存编辑后的直播源信息
-function saveLiveSourceInfo() {
+function saveLiveSourceInfo(popup = true, filePath = '') {
+    // 获取 checkbox 配置
+    const liveTvgLogoEnable = document.getElementById('live_tvg_logo_enable').value;
+    const liveTvgIdEnable = document.getElementById('live_tvg_id_enable').value;
+    const liveTvgNameEnable = document.getElementById('live_tvg_name_enable').value;
+
+    // 保存直播源信息
     fetch('manage.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             save_source_info: 'true',
+            live_tvg_logo_enable: liveTvgLogoEnable,
+            live_tvg_id_enable: liveTvgIdEnable,
+            live_tvg_name_enable: liveTvgNameEnable,
+            file_path: filePath,
             content: JSON.stringify(allLiveData)
         })
     })
     .then(response => response.json())
-    .then(data => showMessageModal(data.success ? '保存成功<br>已生成 M3U 及 TXT 文件' : '保存失败'))
-    .catch(error => showMessageModal('保存过程中出现错误: ' + error));
+    .then(data => {
+        if (popup) {
+            showMessageModal(data.success ? '保存成功<br>已生成 M3U 及 TXT 文件' : '保存失败');
+        }
+    })
+    .catch(error => {
+        if (popup) {
+            showMessageModal('保存过程中出现错误: ' + error);
+        }
+    });
+}
+
+// 直播源信息另存为新文件
+function saveLiveSourceInfoAs() {
+    showMessageModal('');
+    document.getElementById('messageModalMessage').innerHTML = `
+        <div style="width: 180px;">
+            <h3>另存为</h3>
+            <input type="text" value="" id="fileName" style="text-align: center; font-size: 15px; margin-bottom: 15px;" />
+            <button id="confirmBtn" style="margin-bottom: -10px;">确认</button>
+        </div>
+    `;
+
+    // 添加按钮点击事件，点击后另存为新文件
+    document.getElementById('confirmBtn').onclick = function () {
+        fileName = document.getElementById('fileName').value;
+        saveLiveSourceInfo(popup = false, fileName);
+    
+        // 检查并添加 fileName 到文本框
+        let t = document.getElementById('sourceUrlTextarea');
+        if (!t.value.split('\n').some(line => line.replace(/[#\s]/g, '').trim() === fileName)) {
+            t.value += `\n# ${fileName}`;
+            t.scrollTop = t.scrollHeight;
+            saveLiveSourceFile();
+        }
+
+        const [token, serverUrl, tokenRange] = document.getElementById('showLiveUrlBtn')
+            .getAttribute('onclick')
+            .match(/\`(.*?)\`/g)
+            .map(s => s.slice(1, -1));
+        token = token.split(',')[0];
+        var tokenStr = (tokenRange == 1 || tokenRange == 3) ? `token=${token}&` : '';
+        var m3uUrl = `${serverUrl}/index.php?${tokenStr}live=m3u&url=${fileName}`;
+        var txtUrl = `${serverUrl}/index.php?${tokenStr}live=txt&url=${fileName}`;
+        message = `成功另存为 ${fileName}<br>
+                    M3U：<br><a href="${m3uUrl}" target="_blank">${m3uUrl}</a><br>
+                    TXT：<br><a href="${txtUrl}" target="_blank">${txtUrl}`;
+        showMessageModal(message);
+    };
 }
 
 // 清理未使用的直播源文件
 function cleanUnusedSource() {
-    fetch('manage.php?delete_unused_source=true')
+    fetch('manage.php?delete_unused_live_data=true')
     .then(response => response.json())
     .then(data => {
         if (data.success) {
@@ -675,34 +889,17 @@ function cleanUnusedSource() {
     });
 }
 
-// 显示直播源信息
-function showLiveInfo(token, serverUrl) {
-    var m3uUrl = `${serverUrl}/?token=${token}&live=m3u`;
-    var txtUrl = `${serverUrl}/?token=${token}&live=txt`;
+// 显示直播源地址
+function showLiveUrl(token, serverUrl, tokenRange) {
+    var tokenStr = (tokenRange == 1 || tokenRange == 3) ? `token=${token}&` : '';
+    var m3uUrl = `${serverUrl}/index.php?${tokenStr}live=m3u`;
+    var txtUrl = `${serverUrl}/index.php?${tokenStr}live=txt`;
     message = `M3U：<br><a href="${m3uUrl}" target="_blank">${m3uUrl}</a>
                 &ensp;<a href="${m3uUrl}" download="tv.m3u">下载</a><br>
                 TXT：<br><a href="${txtUrl}" target="_blank">${txtUrl}</a>
                 &ensp;&ensp;<a href="${txtUrl}" download="tv.txt">下载</a><br>
-                转换：<br>${m3uUrl}/txt&url=xxx`;
+                转换：<br>${m3uUrl}&url=xxx<br>${txtUrl}&url=xxx`;
     showMessageModal(message);
-}
-
-// 显示 token 范围信息
-function showTokenRangeMessage(token, serverUrl) {
-    var tokenRange = document.getElementById("token_range").value;
-    var message = '';
-    var baseUrl = serverUrl + '/?token=' + token;
-    if (tokenRange == "1" || tokenRange == "3") {
-        message += `直播源地址：<br><a href="${baseUrl}&live=m3u" target="_blank">${baseUrl}&live=m3u</a><br>
-                    <a href="${baseUrl}&live=txt" target="_blank">${baseUrl}&live=txt</a>`;
-    }
-    if (tokenRange == "2" || tokenRange == "3") {
-        if (message) message += '<br>';
-        message += `EPG地址：<br><a href="${baseUrl}" target="_blank">${baseUrl}</a>`;
-    }
-    if (message) {
-        showMessageModal(message);
-    }
 }
 
 // 显示直播源模板
@@ -712,8 +909,23 @@ function showLiveTemplate() {
 
 // 保存编辑后的直播源模板
 function saveLiveTemplate() {
-    liveTemplateContent = document.getElementById('liveTemplateTextarea').value;
+    // 保存配置
+    liveTemplateEnable = document.getElementById('live_template_enable').value;
+    liveFuzzyMatch = document.getElementById('live_fuzzy_match').value;
+    liveUrlComment = document.getElementById('live_url_comment').value;
+    fetch('manage.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            update_config_field: 'true',
+            live_template_enable: liveTemplateEnable,
+            live_fuzzy_match: liveFuzzyMatch,
+            live_url_comment: liveUrlComment
+        })
+    });
+
     // 内容写入 template.txt 文件
+    liveTemplateContent = document.getElementById('liveTemplateTextarea').value;
     fetch('manage.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -807,7 +1019,7 @@ function filterChannels(type) {
                 row.innerHTML = `
                     <td contenteditable="true">${item.channel}</td>
                     <td contenteditable="true">${item.icon || ''}</td>
-                    <td>${item.icon ? `<a href="${item.icon}" target="_blank"><img src="${item.icon}" style="max-width: 80px; max-height: 50px; background-color: #ccc;"></a>` : ''}</td>
+                    <td>${item.icon ? `<a href="${item.icon}" target="_blank"><img loading="lazy" src="${item.icon}" style="max-width: 80px; max-height: 50px; background-color: #ccc;"></a>` : ''}</td>
                     <td>
                         <input type="file" accept="image/png" style="display:none;" id="file_${index}">
                         <button onclick="document.getElementById('file_${index}').click()" style="font-size: 14px; width: 50px;">上传</button>
@@ -843,7 +1055,7 @@ function handleIconFileUpload(event, item, row, allData) {
                     item.icon = iconUrl;
                     row.cells[2].innerHTML = `
                         <a href="${iconUrl}?${new Date().getTime()}" target="_blank">
-                            <img src="${iconUrl}?${new Date().getTime()}" style="max-width: 80px; max-height: 50px; background-color: #ccc;">
+                            <img loading="lazy" src="${iconUrl}?${new Date().getTime()}" style="max-width: 80px; max-height: 50px; background-color: #ccc;">
                         </a>
                     `;
                     document.getElementById('iconTable').dataset.allIcons = JSON.stringify(allData);
@@ -861,7 +1073,6 @@ function handleIconFileUpload(event, item, row, allData) {
 
 // 转存所有台标到服务器
 function uploadAllIcons() {
-    const serverUrl = window.location.origin;
     const iconTable = document.getElementById('iconTable');
     const allIcons = JSON.parse(iconTable.dataset.allIcons);
     const rows = Array.from(document.querySelectorAll('#iconTable tbody tr'));
@@ -872,7 +1083,7 @@ function uploadAllIcons() {
         const iconUrl = row.cells[1]?.innerText.trim();
         if (iconUrl) {
             totalIcons++;
-            if (!iconUrl.startsWith(serverUrl)) {
+            if (!iconUrl.startsWith('/data/icon/')) {
                 return true;
             } else {
                 uploadedIcons++;
@@ -908,7 +1119,7 @@ function uploadAllIcons() {
                     iconCell.innerText = iconUrl;
                     previewCell.innerHTML = `
                         <a href="${iconUrl}?${Date.now()}" target="_blank">
-                            <img src="${iconUrl}?${Date.now()}" style="max-width: 80px; max-height: 50px; background-color: #ccc;">
+                            <img loading="lazy" src="${iconUrl}?${Date.now()}" style="max-width: 80px; max-height: 50px; background-color: #ccc;">
                         </a>
                     `;
 
@@ -1040,6 +1251,8 @@ function parseSourceInfo(message = '') {
         }
     })
     .catch(error => showMessageModal('解析过程中发生错误：' + error));
+
+    document.getElementById('liveSourceSearchInput').value = ''; // 清空搜索框内容
 }
 
 // 保存限定频道列表
@@ -1126,36 +1339,43 @@ document.getElementById('importFile').addEventListener('change', function() {
     this.value = ''; // 重置文件输入框的值，确保可以连续上传相同文件
 });
 
-// 修改 token 对话框
-function changeToken(currentToken) {
+// 修改 token、user_agent 对话框
+function changeTokenUA(type, currentTokenUA) {
     showMessageModal('');
+    typeStr = (type === 'token' ? 'Token' : 'User-Agent') + '<br>支持多个，逗号分隔';
     document.getElementById('messageModalMessage').innerHTML = `
-        <div style="width: 180px; height: 125px;">
-            <h3>修改 token</h3>
-            <input type="text" value="${currentToken}" id="newToken" style="text-align: center; font-size: 15px; margin-bottom: 15px;" />
-            <button onclick="updateToken()">确认</button>
+        <div style="width: 180px;">
+            <h3>修改 ${typeStr}</h3>
+            <input type="text" value="${currentTokenUA}" id="newTokenUA" style="text-align: center; font-size: 15px; margin-bottom: 15px;" />
+            <button onclick="updateTokenUA('${type}')" style="margin-bottom: -10px;">确认</button>
         </div>
     `;
 }
 
-// 更新 token 到 config.json
-function updateToken() {
-    var newToken = document.getElementById('newToken').value;
+// 更新 token、user_agent 到 config.json
+function updateTokenUA(type) {
+    var newTokenUA = document.getElementById('newTokenUA').value.replace(/，/g, ","); // 将中文逗号替换为英文逗号
 
     // 内容写入 config.json 文件
     fetch('manage.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-            save_token: 'true',
-            content: newToken
+            update_config_field: 'true',
+            [type.toLowerCase()]: newTokenUA
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('修改成功');
-            window.location.href = 'manage.php';
+            if (type.toLowerCase() == 'token' || newTokenUA == '') {
+                alert('修改成功');
+                window.location.href = 'manage.php';
+            }
+            else {
+                showMessageModal('修改成功');
+                document.getElementById('change_ua_span').setAttribute('onclick', `changeTokenUA('user_agent', '${newTokenUA}')`);
+            }
         } else {
             showMessageModal('修改失败');
         }
@@ -1167,7 +1387,8 @@ function updateToken() {
 function showTokenRangeMessage(token, serverUrl) {
     var tokenRange = document.getElementById("token_range").value;
     var message = '';
-    var baseUrl = serverUrl + '/?token=' + token;
+    token = token.split(',')[0];
+    var baseUrl = serverUrl + '/index.php?token=' + token;
     if (tokenRange == "1" || tokenRange == "3") {
         message += `直播源地址：<br><a href="${baseUrl}&live=m3u" target="_blank">${baseUrl}&live=m3u</a><br>
                     <a href="${baseUrl}&live=txt" target="_blank">${baseUrl}&live=txt</a>`;
@@ -1179,7 +1400,14 @@ function showTokenRangeMessage(token, serverUrl) {
     if (message) {
         showMessageModal(message);
     }
+    document.getElementById('showLiveUrlBtn').setAttribute('onclick', `showLiveUrl('${token}', '${serverUrl}', '${tokenRange}')`);
 }
+
+// 监听 debug_mode 更变
+document.getElementById("debug_mode").addEventListener("change", function () {
+    const show = this.value === "1";
+    document.getElementById("accessLogBtn").style.display = show ? "inline-block" : "none";
+});
 
 // 切换主题
 document.getElementById('themeSwitcher').addEventListener('click', function() {

@@ -1,7 +1,7 @@
 ![EPG-Server](https://socialify.git.ci/taksssss/EPG-Server/image?description=1&descriptionEditable=Docker%F0%9F%90%B3%E9%83%A8%E7%BD%B2%EF%BC%8C%E5%B8%A6%E8%AE%BE%E7%BD%AE%E7%95%8C%E9%9D%A2%E3%80%81%E5%8F%B0%E6%A0%87%E7%AE%A1%E7%90%86%EF%BC%8C%E6%94%AF%E6%8C%81DIYP%E3%80%81%E8%B6%85%E7%BA%A7%E7%9B%B4%E6%92%AD%E5%8F%8Axmltv%E3%80%82&font=Inter&forks=1&issues=1&language=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Auto)
 
 # 📺 EPG-Server
-![Docker Pulls](https://img.shields.io/docker/pulls/taksss/php-epg) ![Image Size](https://img.shields.io/docker/image-size/taksss/php-epg)
+![Docker Pulls](https://img.shields.io/docker/pulls/taksss/php-epg) ![Image Size](https://img.shields.io/docker/image-size/taksss/php-epg/latest)
 
 PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带设置界面、台标管理、直播源管理，支持 **DIYP & 百川** 、 **超级直播** 以及 **xmltv** 格式。
 
@@ -19,7 +19,7 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
 
 ➰ **直播源管理**：支持聚合 TXT/M3U 直播源，并定时更新。
 
-🔒 **访问权限控制**：支持设置 TOKEN ，限制访问 EPG 服务及直播源。
+🔒 **访问权限控制**：支持设置 TOKEN 、User-Agent ，限制访问 EPG 服务及直播源。
 
 ⏱️ **缓存支持**：集成 Memcached，可自定义缓存时间。
 
@@ -36,7 +36,13 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
 🌐 **界面设置**：包含简单易用的网页设置页面，便于操作和管理。
 
 > [!TIP]
-> `xmltv` 用户搭配 [【一键生成】匹配 M3U 文件的 XML 节目单](https://www.right.com.cn/forum/thread-8392662-1-1.html) 使用。
+> ⚠️ 使用前请仔细阅读「管理页面」底部的[「使用说明」](/epg/assets/html/readme.md)
+> 
+> 原贴：[【Docker | 台标管理 | 直播源管理】自建DIYP、超级直播EPG节目单服务](https://www.right.com.cn/forum/thread-8386320-1-1.html)
+> 
+> `xmltv` 用户使用方法：[【一键生成】匹配 M3U 文件的 XML 节目单](https://www.right.com.cn/forum/thread-8392662-1-1.html) 
+>
+> `直播源管理` 使用方法：[【EPG-Server】直播源管理使用说明](https://www.right.com.cn/forum/thread-8417162-1-1.html) 
 
 <picture>
   <source
@@ -79,43 +85,26 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
 
 1. 配置 `Docker` 环境
 
-2. 若已安装过，先删除旧版本并拉取新版本（**⚠️注意备份数据：`更多设置` -> `数据导出` / `数据导入`**）
-
-   ```bash
-   docker rm php-epg -f && docker pull taksss/php-epg:latest
-   ```
-
-3. 拉取镜像并运行：
+2. 拉取镜像并运行：
 
    ```bash
    docker run -d \
      --name php-epg \
+     -v /etc/epg:/htdocs/data \
      -p 5678:80 \
-     --restart always \
+     --restart unless-stopped \
      taksss/php-epg:latest
    ```
 
+    > 默认数据目录为 `/etc/epg` ，根据需要自行修改
+    > 
     > 默认端口为 `5678` ，根据需要自行修改（注意端口占用）
     > 
     > 可选参数：`-e PHP_MEMORY_LIMIT=512M` ，设置 PHP 内存限制，默认 `512M`
     > 
+    > 可选参数：`-e ENABLE_FFMPEG=true` ，启用 ffmpeg 组件
+    > 
     > 无法正常拉取镜像的，可使用同步更新的 `腾讯云容器镜像`（`ccr.ccs.tencentyun.com/taksss/php-epg:latest`）
-
-<details>
-
-<summary>（可选）数据持久化</summary>
-
-- 执行以下指令，`./data` 可根据自己需要更改
-    ```bash
-    docker run -d \
-      --name php-epg \
-      -v ./data:/htdocs/data \
-      -p 5678:80 \
-      --restart always \
-      taksss/php-epg:latest
-    ```
-
-</details>
 
 <details>
 
@@ -131,7 +120,7 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
       -e MYSQL_DATABASE=phpepg \
       -e MYSQL_USER=phpepg \
       -e MYSQL_PASSWORD=phpepg \
-      --restart always \
+      --restart unless-stopped \
       mysql:8.0
     ```
     ```bash
@@ -141,21 +130,34 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
       -e PMA_HOST=mysql \
       -e PMA_PORT=3306 \
       --link mysql:mysql \
-      --restart always \
+      --restart unless-stopped \
       phpmyadmin/phpmyadmin:latest
     ```
     ```bash
     docker run -d \
       --name php-epg \
-      -v ./data:/htdocs/data \
+      -v /etc/epg:/htdocs/data \
       -p 5678:80 \
-      --restart always \
+      --restart unless-stopped \
       --link mysql:mysql \
       --link phpmyadmin:phpmyadmin \
       taksss/php-epg:latest
     ```
  
 </details>
+
+## 🆙 版本升级
+
+一键升级
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower php-epg --cleanup --run-once
+```
+
+自动检测
+```bash
+docker run -d --name php-epg-update -v /var/run/docker.sock:/var/run/docker.sock --restart unless-stopped containrrr/watchtower php-epg --cleanup --interval 3600
+```
+
 
 ## 🛠️ 使用步骤
 
@@ -202,6 +204,8 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
   />
 </picture>
 
+[查看捐赠者名单](/DONATIONS.md)
+
 ## ⭐ Star History
 
 <picture>
@@ -228,3 +232,4 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
 - [EPG 51zmt](http://epg.51zmt.top:8000/)
 - [fanmingming/live](https://github.com/fanmingming/live)
 - [wanglindl/TVlogo](https://github.com/wanglindl/TVlogo)
+- [Guovin/iptv-api](https://github.com/Guovin/iptv-api)
