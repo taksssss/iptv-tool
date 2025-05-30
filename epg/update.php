@@ -53,11 +53,33 @@ function deleteOldData($db, $thresholdDate, &$log_messages) {
     }
     
     // 清理 memcached 数据
-    if (class_exists('Memcached') && ($memcached = new Memcached())->addServer('localhost', 11211)) {
-        $memcached->flush();
-        logMessage($log_messages, "【Memcached】 已清空。");
+    if (class_exists('Memcached')) {
+        $memcached = new Memcached();
+        if ($memcached->addServer('127.0.0.1', 11211)) {
+            $memcached->flush();
+            logMessage($log_messages, "【Memcached】 已清空。");
+        } else {
+            logMessage($log_messages, "【Memcached】 状态异常。");
+        }
     } else {
-        logMessage($log_messages, "【Memcached】 状态异常。");
+        logMessage($log_messages, "【Memcached】 未安装。");
+    }
+
+    // 清理 redis 数据
+    if (class_exists('Redis')) {
+        $redis = new Redis();
+        try {
+            $redis->connect('127.0.0.1', 6379);
+            if (!empty($Config['redis_password'])) {
+                $redis->auth($Config['redis_password']);
+            }
+            $redis->flushAll();
+            logMessage($log_messages, "【Redis】 已清空。");
+        } catch (Exception $e) {
+            logMessage($log_messages, "【Redis】 状态异常：" . $e->getMessage());
+        }
+    } else {
+        logMessage($log_messages, "【Redis】 未安装。");
     }
 
     echo "<br>";

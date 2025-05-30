@@ -55,6 +55,13 @@ try {
     exit();
 }
 
+/*
+Redis 缓存密码，默认不启用，除非需要设置密码。
+$Config = [
+    'redis_password' => 'your_redis_password', // 替换为你的 Redis 密码
+];
+ */
+
 // 初始化数据库表
 function initialDB() {
     global $db;
