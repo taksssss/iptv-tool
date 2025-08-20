@@ -10,6 +10,8 @@ LOG_LEVEL="${LOG_LEVEL:-info}"
 TZ="${TZ:-Asia/Shanghai}"
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-512M}"
 ENABLE_FFMPEG="${ENABLE_FFMPEG:-false}"
+HTTP_PORT="${HTTP_PORT:-80}"
+HTTPS_PORT="${HTTPS_PORT:-443}"
 
 echo 'Updating configurations'
 
@@ -73,7 +75,7 @@ EOF
 
 # Change Server Admin, Name, Document Root
 sed -i "s/ServerAdmin\ you@example.com/ServerAdmin\ ${SERVER_ADMIN}/" /etc/apache2/httpd.conf
-sed -i "s/#ServerName\ www.example.com:80/ServerName\ ${HTTP_SERVER_NAME}/" /etc/apache2/httpd.conf
+sed -i "s/#ServerName\ www.example.com:80/ServerName\ ${HTTP_SERVER_NAME}:${HTTP_PORT}/" /etc/apache2/httpd.conf
 sed -i 's#^DocumentRoot ".*#DocumentRoot "/htdocs"#g' /etc/apache2/httpd.conf
 sed -i 's#Directory "/var/www/localhost/htdocs"#Directory "/htdocs"#g' /etc/apache2/httpd.conf
 sed -i 's#AllowOverride None#AllowOverride All#' /etc/apache2/httpd.conf
@@ -87,7 +89,7 @@ sed -i 's#^ErrorLog .*#ErrorLog "/dev/stderr"#g' /etc/apache2/conf.d/ssl.conf
 sed -i 's#^TransferLog .*#TransferLog "/dev/null"#g' /etc/apache2/conf.d/ssl.conf
 sed -i 's#^DocumentRoot ".*#DocumentRoot "/htdocs"#g' /etc/apache2/conf.d/ssl.conf
 sed -i "s/ServerAdmin\ you@example.com/ServerAdmin\ ${SERVER_ADMIN}/" /etc/apache2/conf.d/ssl.conf
-sed -i "s/ServerName\ www.example.com:443/ServerName\ ${HTTPS_SERVER_NAME}/" /etc/apache2/conf.d/ssl.conf
+sed -i "s/ServerName\ www.example.com:443/ServerName\ ${HTTPS_SERVER_NAME}:${HTTPS_PORT}/" /etc/apache2/conf.d/ssl.conf
 
 # Re-define LogLevel
 sed -i "s#^LogLevel .*#LogLevel ${LOG_LEVEL}#g" /etc/apache2/httpd.conf
@@ -96,6 +98,10 @@ sed -i "s#^LogLevel .*#LogLevel ${LOG_LEVEL}#g" /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ rewrite_module/LoadModule\ rewrite_module/' /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ deflate_module/LoadModule\ deflate_module/' /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ expires_module/LoadModule\ expires_module/' /etc/apache2/httpd.conf
+
+# Configure dynamic ports
+sed -i "s/^Listen 80$/Listen ${HTTP_PORT}/" /etc/apache2/httpd.conf
+sed -i "s/^Listen 443$/Listen ${HTTPS_PORT}/" /etc/apache2/conf.d/ssl.conf
 
 # Modify php memory limit, timezone and file size limit
 sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /etc/php83/php.ini

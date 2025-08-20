@@ -47,6 +47,7 @@ RUN apk --no-cache --update \
 # 复制 ./epg 文件夹内容到 /htdocs
 COPY ./epg /htdocs
 
+# Default ports (can be overridden with HTTP_PORT and HTTPS_PORT environment variables)
 EXPOSE 80 443
 
 ADD docker-entrypoint.sh /
