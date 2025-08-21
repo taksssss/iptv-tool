@@ -20,18 +20,13 @@
 })();
 </script>
 <div class="container">
-    <div>
-        <input type="checkbox" class="checkbox" id="themeSwitcher">
+    <div id="theme-app">
+        <input type="checkbox" class="checkbox" id="themeSwitcher" @click="toggleTheme">
         <label for="themeSwitcher" class="checkbox-label">
-            <i id="themeIcon"></i>
-            <span class="label-text"></span>
+            <i :class="iconClass"></i>
+            <span class="label-text">{{ labelText }}</span>
             <span class="ball"></span>
         </label>
-        <script>
-            const theme = localStorage.getItem('theme');
-            document.getElementById("themeIcon").className = `fas ${theme === 'dark' ? 'fa-moon' : theme === 'light' ? 'fa-sun' : 'fa-adjust'}`;
-            document.querySelector('.label-text').textContent = (theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto');
-        </script>
     </div>
     <h2>管理配置</h2>
     <form method="POST" id="settingsForm">
@@ -819,6 +814,8 @@
         <button id="saveConfig" type="button" onclick="setGenListAndUpdateConfig();">保存配置</button>
     </div>
 </div>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="assets/js/vue-app.js"></script>
 <script src="assets/js/manage.js"></script>
 </body>
 </html>

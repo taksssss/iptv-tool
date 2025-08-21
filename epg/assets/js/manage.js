@@ -1759,38 +1759,4 @@ function debugMode(selectElem) {
     document.getElementById("accessLogBtn").style.display = selectElem.value === "1" ? "inline-block" : "none";
 }
 
-// 切换主题
-document.getElementById('themeSwitcher').addEventListener('click', function() {
-    // 获取当前主题，并切换到下一个主题
-    const currentTheme = localStorage.getItem('theme');
-    const newTheme = currentTheme === 'light' ? 'dark' : (currentTheme === 'dark' ? '' : 'light');
-    
-    // 更新主题
-    document.body.classList.add('theme-transition');
-    document.body.classList.remove('dark', 'light');
-
-    if (newTheme === '') {
-        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        document.body.classList.add(prefersDarkScheme ? 'dark' : 'light');
-    } else {
-        document.body.classList.add(newTheme);
-    }
-
-    // 更新图标和文字
-    document.getElementById("themeIcon");
-    const labelText = document.querySelector('.label-text');
-    themeIcon.className = `fas ${newTheme === 'dark' ? 'fa-moon' : newTheme === 'light' ? 'fa-sun' : 'fa-adjust'}`;
-    labelText.textContent = newTheme === 'dark' ? 'Dark' : newTheme === 'light' ? 'Light' : 'Auto';
-    
-    // 保存到本地存储
-    localStorage.setItem('theme', newTheme);
-});
-
-// 监听系统主题变化
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-    if(!localStorage.getItem('theme')) {
-        const theme = e.matches ? 'dark' : 'light';
-        document.body.classList.remove('dark', 'light');
-        document.body.classList.add(theme);
-    }
-});
+// 主题切换逻辑迁移至 Vue 组件（见 assets/js/vue-app.js）
