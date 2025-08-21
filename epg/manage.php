@@ -180,8 +180,22 @@ try {
             'get_icon', 'get_channel_bind_epg', 'get_channel_match', 'get_gen_list',
             'get_live_data', 'parse_source_info', 'download_source_data', 'delete_unused_icons', 
             'delete_source_config', 'delete_unused_live_data', 'get_version_log', 'get_readme_content', 
-            'get_access_log', 'get_access_stats', 'clear_access_log', 'get_ip_list', 'test_redis'
+            'get_access_log', 'get_access_stats', 'clear_access_log', 'get_ip_list', 'test_redis', 'get_config'
         ];
+            case 'get_config':
+                // 提供配置给前端（去除敏感信息）
+                $safeConfig = $Config;
+                if (isset($safeConfig['manage_password'])) {
+                    unset($safeConfig['manage_password']);
+                }
+                if (isset($safeConfig['mysql']['password'])) {
+                    $safeConfig['mysql']['password'] = '';
+                }
+                if (isset($safeConfig['redis']['password'])) {
+                    $safeConfig['redis']['password'] = '';
+                }
+                $dbResponse = $safeConfig;
+                break;
         $action = key(array_intersect_key($_GET, array_flip($action_map))) ?: '';
 
         // 根据操作类型执行不同的逻辑

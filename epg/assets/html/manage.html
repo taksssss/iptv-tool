@@ -29,11 +29,12 @@
         </label>
     </div>
     <h2>管理配置</h2>
-    <form method="POST" id="settingsForm">
+    <div id="manage-app">
+    <form method="POST" id="settingsForm" @submit.prevent="submitSettings">
         <label for="xml_urls">【EPG地址】</label>
         <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">（频道指定源）</span>
         <br><br>
-        <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
+        <textarea id="xml_urls" name="xml_urls" v-model="form.xml_urls"></textarea>
         <br><br>
 
         <div class="form-row">
@@ -44,30 +45,18 @@
         </div>
 
         <div class="form-row">
-            <select id="days_to_keep" name="days_to_keep" required>
-                <?php for ($i = 1; $i <= 30; $i++): ?>
-                    <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
-                        <?= $i; ?>
-                    </option>
-                <?php endfor; ?>
+            <select id="days_to_keep" name="days_to_keep" v-model.number="form.days_to_keep" required>
+                <option v-for="i in 30" :key="i" :value="i">{{ i }}</option>
             </select>
-            <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
-            <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
+            <input type="time" id="start_time" name="start_time" v-model="form.start_time" required>
+            <input type="time" id="end_time" name="end_time" v-model="form.end_time" required>
 
             <!-- Interval Time Controls -->
-            <select id="interval_hour" name="interval_hour" required>
-                <?php for ($h = 0; $h < 24; $h++): ?>
-                    <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
-                        <?= $h; ?>
-                    </option>
-                <?php endfor; ?>
+            <select id="interval_hour" name="interval_hour" v-model.number="form.interval_hour" required>
+                <option v-for="h in 24" :key="h-1" :value="h-1">{{ h-1 }}</option>
             </select> 小时
-            <select id="interval_minute" name="interval_minute" required>
-                <?php for ($m = 0; $m < 60; $m++): ?>
-                    <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
-                        <?= $m; ?>
-                    </option>
-                <?php endfor; ?>
+            <select id="interval_minute" name="interval_minute" v-model.number="form.interval_minute" required>
+                <option v-for="m in 60" :key="m-1" :value="m-1">{{ m-1 }}</option>
             </select> 分钟
         </div><br>
 
@@ -78,11 +67,7 @@
                 <span class="blue-span" id="iconInfo" onclick="showModal('icon')">（台标管理）</span>
                 <span class="blue-span" id="liveInfo" onclick="showModal('live')">（直播源管理）</span>
                 <br><br>
-                <textarea id="channel_mappings" name="channel_mappings"><?php 
-                    echo implode("\n", array_map(function($search, $replace) {
-                        return $search . ' => ' . $replace;
-                    }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
-                ?></textarea>
+                <textarea id="channel_mappings" name="channel_mappings" v-model="form.channel_mappings"></textarea>
             </div>
         </div>
         <br>
@@ -102,6 +87,7 @@
             <button type="button" name="logoutbtn" onclick="logout()">退出</button>
         </div>
     </form>
+    </div>
 </div>
 
 <!-- 底部显示 -->
@@ -816,6 +802,7 @@
 </div>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="assets/js/vue-app.js"></script>
+<script src="assets/js/manage-vue.js"></script>
 <script src="assets/js/manage.js"></script>
 </body>
 </html>
