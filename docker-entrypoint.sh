@@ -77,10 +77,10 @@ EOL
     fi
 fi
 
-# Compose token block for rewrite (only when enforced)
-TOKEN_BLOCK=""
+# Compose token env gating rules (proxy.php only used on failure)
+TOKEN_GATE_RULES="    # No token enforcement (allow all)\n    RewriteRule ^/proxy\\.php$ - [E=ALLOW_PROXY:1]"
 if [ "${TOKEN_RANGE}" != "0" ] && [ -n "${TOKEN_PATTERN}" ]; then
-    TOKEN_BLOCK="    # Token validation for proxy\n    RewriteCond %{QUERY_STRING} (^|&)token=([^&]+) [NC]\n    RewriteCond %2 !^(${TOKEN_PATTERN})$ [NC]\n    RewriteRule ^/proxy\\.php$ - [F]"
+    TOKEN_GATE_RULES="    # Token validation for proxy\n    RewriteCond %{QUERY_STRING} (^|&)token=([^&]+) [NC]\n    RewriteCond %2 ^(${TOKEN_PATTERN})$ [NC]\n    RewriteRule ^/proxy\\.php$ - [E=ALLOW_PROXY:1]\n\n    # If not allowed, route to PHP auth handler\n    RewriteCond %{ENV:ALLOW_PROXY} !=1\n    RewriteRule ^/proxy\\.php$ /proxy.php?auth=fail [L]"
 fi
 
 # Write URL rewrite rules to conf.d/rewrite.conf (with proxy forwarding)
@@ -92,11 +92,13 @@ cat > /etc/apache2/conf.d/rewrite.conf <<EOF
     ProxyRequests Off
 
     # proxy.php forwarding via mod_proxy with basic SSRF guards
-    # 1) Extract full URL and host from query string
+${TOKEN_GATE_RULES}
+
+    # 1) Extract full URL and host from query string when allowed
+    RewriteCond %{ENV:ALLOW_PROXY} =1
     RewriteCond %{QUERY_STRING} (^|&)url=(https?://([^/:&]+)[^&]*) [NC]
     # 2) Block localhost and obvious private IPv4/IPv6 literals
     RewriteCond %3 !^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|\[::1\]) [NC]
-${TOKEN_BLOCK}
     # 3) Proxy to captured URL
     RewriteRule ^/proxy\.php$ %2 [P,L,NE]
 
@@ -149,7 +151,7 @@ sed -i 's/#LoadModule\ proxy_connect_module/LoadModule\ proxy_connect_module/' /
 
 # Modify php memory limit, timezone and file size limit
 sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /etc/php83/php.ini
-sed -i "s#^;date.timezone =\$#date.timezone = \"${TZ}\"#" /etc/php83/php.ini
+sed -i "s#^;date.timezone =$#date.timezone = \"${TZ}\"#" /etc/php83/php.ini
 sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php83/php.ini
 sed -i "s/post_max_size = .*/post_max_size = 100M/" /etc/php83/php.ini
 
