@@ -80,7 +80,7 @@
             <button type="button" onclick="showModal('cron')">定时日志</button>
             <button type="button" onclick="showModal('update')">更新日志</button>
             <button type="button" id="accessLogBtn" onclick="showAccessLogModal()" 
-                style="display: <?= (@$Config['debug_mode'] == 1) ? 'inline-block' : 'none'; ?>;">
+                v-show="Number(form.debug_mode) === 1">
                 访问日志
             </button>
             <button type="button" onclick="showModal('moresetting')">更多设置</button>

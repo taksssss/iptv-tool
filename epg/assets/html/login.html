@@ -18,20 +18,20 @@
     }
 })();
 </script>
-<div class="container">
+<div id="login-app" class="container">
     <h2>登录</h2>
-    <form method="POST">
+    <form method="POST" @submit.prevent="submitLogin">
         <label for="password">管理密码：</label><br><br>
-        <input type="password" id="password" name="password"><br><br>
+        <input type="password" id="password" name="password" v-model="password"><br><br>
         <input type="hidden" name="login" value="1">
         <input type="submit" value="登录">
     </form>
     <div class="button-container">
-        <button type="button" onclick="showChangePasswordForm()">更改密码</button>
+        <button type="button" @click="openChangePassword">更改密码</button>
     </div>
-    <?php if (!empty($error)) echo "<p style='color:red;'>$error</p>"; ?>
-    <?php echo $passwordChangedMessage; ?>
-    <?php echo $passwordChangeErrorMessage; ?>
+    <p v-if="errorMessage" style="color:red;" v-text="errorMessage"></p>
+    <p v-if="successMessage" style="color:green;" v-html="successMessage"></p>
+    <p v-if="changeErrorMessage" style="color:red;" v-text="changeErrorMessage"></p>
 </div>
 
 <!-- 底部显示 -->
@@ -42,41 +42,25 @@
 </div>
 
 <!-- 修改密码模态框 -->
-<div id="changePasswordModal" class="modal">
-    <div class="passwd-modal-content">
-        <span class="close">&times;</span>
+<div id="changePasswordModal" class="modal" :style="{ display: showChangeModal ? 'block' : 'none' }">
+    <div class="passwd-modal-content" @mousedown.stop>
+        <span class="close" @click="closeChangePassword">&times;</span>
         <h2>更改登录密码</h2>
-        <form method="POST">
+        <form method="POST" @submit.prevent="submitChangePassword">
             <div class="form-group">
                 <label for="old_password">原密码</label>
-                <input type="password" id="old_password" name="old_password">
+                <input type="password" id="old_password" name="old_password" v-model="oldPassword">
             </div>
             <div class="form-group">
                 <label for="new_password">新密码</label>
-                <input type="password" id="new_password" name="new_password">
+                <input type="password" id="new_password" name="new_password" v-model="newPassword">
             </div>
             <input type="hidden" name="change_password" value="1">
             <input type="submit" value="更改密码" style="margin-top: 15px;">
         </form>
     </div>
 </div>
-<script>
-    function showChangePasswordForm() {
-        var changePasswordModal = document.getElementById("changePasswordModal");
-        var changePasswordSpan = document.getElementsByClassName("close")[0];
-
-        changePasswordModal.style.display = "block";
-
-        changePasswordSpan.onclick = function() {
-            changePasswordModal.style.display = "none";
-        }
-
-        window.onclick = function(event) {
-            if (event.target == changePasswordModal) {
-                changePasswordModal.style.display = "none";
-            }
-        }
-    }
-</script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="assets/js/login-vue.js"></script>
 </body>
 </html>

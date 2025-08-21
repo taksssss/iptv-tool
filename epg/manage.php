@@ -194,6 +194,18 @@ try {
                 if (isset($safeConfig['redis']['password'])) {
                     $safeConfig['redis']['password'] = '';
                 }
+                // 计算 mod_rewrite
+                $modRewrite = false;
+                if (function_exists('apache_get_modules') && in_array('mod_rewrite', apache_get_modules())) {
+                    $modRewrite = true;
+                }
+                // 计算 server_url
+                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+                $scheme = $isHttps ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+                $serverUrl = $scheme . '://' . $host;
+                $safeConfig['mod_rewrite'] = $modRewrite;
+                $safeConfig['server_url'] = $serverUrl;
                 $dbResponse = $safeConfig;
                 break;
         $action = key(array_intersect_key($_GET, array_flip($action_map))) ?: '';
