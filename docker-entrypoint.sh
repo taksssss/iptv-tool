@@ -48,10 +48,57 @@ cat <<EOF >> /etc/apache2/httpd.conf
 EOF
 fi
 
-# Write URL rewrite rules to conf.d/rewrite.conf
-cat <<'EOF' > /etc/apache2/conf.d/rewrite.conf
+# Build token regex from config for proxy gate
+TOKEN_RANGE=1
+TOKEN_PATTERN=""
+if [ -f /htdocs/data/config.json ]; then
+    TOKEN_RANGE=$(jq -r '.token_range // 1' /htdocs/data/config.json 2>/dev/null || echo 1)
+    TOKENS_RAW=$(jq -r '.token // ""' /htdocs/data/config.json 2>/dev/null | tr -d '\r')
+    if [ -n "$TOKENS_RAW" ]; then
+        while IFS= read -r line; do
+            t=$(echo "$line" | xargs)
+            [ -z "$t" ] && continue
+            if printf '%s' "$t" | grep -q '^regex:'; then
+                pat=${t#regex:}
+                entry="(${pat})"
+            else
+                # Escape regex metachars
+                esc=$(printf '%s' "$t" | sed -e 's/[\\.^$*+?()[\]{}|]/\\&/g')
+                entry="$esc"
+            fi
+            if [ -z "$TOKEN_PATTERN" ]; then
+                TOKEN_PATTERN="$entry"
+            else
+                TOKEN_PATTERN="$TOKEN_PATTERN|$entry"
+            fi
+        done <<EOL
+$TOKENS_RAW
+EOL
+    fi
+fi
+
+# Compose token block for rewrite (only when enforced)
+TOKEN_BLOCK=""
+if [ "${TOKEN_RANGE}" != "0" ] && [ -n "${TOKEN_PATTERN}" ]; then
+    TOKEN_BLOCK="    # Token validation for proxy\n    RewriteCond %{QUERY_STRING} (^|&)token=([^&]+) [NC]\n    RewriteCond %2 !^(${TOKEN_PATTERN})$ [NC]\n    RewriteRule ^/proxy\\.php$ - [F]"
+fi
+
+# Write URL rewrite rules to conf.d/rewrite.conf (with proxy forwarding)
+cat > /etc/apache2/conf.d/rewrite.conf <<EOF
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Harden proxy behavior
+    ProxyRequests Off
+
+    # proxy.php forwarding via mod_proxy with basic SSRF guards
+    # 1) Extract full URL and host from query string
+    RewriteCond %{QUERY_STRING} (^|&)url=(https?://([^/:&]+)[^&]*) [NC]
+    # 2) Block localhost and obvious private IPv4/IPv6 literals
+    RewriteCond %3 !^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|\[::1\]) [NC]
+${TOKEN_BLOCK}
+    # 3) Proxy to captured URL
+    RewriteRule ^/proxy\.php$ %2 [P,L,NE]
 
     # /tv.m3u
     RewriteCond %{QUERY_STRING} !(^|&)type=m3u(&|$)
@@ -96,6 +143,9 @@ sed -i "s#^LogLevel .*#LogLevel ${LOG_LEVEL}#g" /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ rewrite_module/LoadModule\ rewrite_module/' /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ deflate_module/LoadModule\ deflate_module/' /etc/apache2/httpd.conf
 sed -i 's/#LoadModule\ expires_module/LoadModule\ expires_module/' /etc/apache2/httpd.conf
+sed -i 's/#LoadModule\ proxy_module/LoadModule\ proxy_module/' /etc/apache2/httpd.conf
+sed -i 's/#LoadModule\ proxy_http_module/LoadModule\ proxy_http_module/' /etc/apache2/httpd.conf
+sed -i 's/#LoadModule\ proxy_connect_module/LoadModule\ proxy_connect_module/' /etc/apache2/httpd.conf
 
 # Modify php memory limit, timezone and file size limit
 sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /etc/php83/php.ini

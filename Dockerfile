@@ -12,6 +12,7 @@ RUN apk --no-cache --update \
     add apache2 \
     apache2-ssl \
     curl \
+    jq \
     memcached \
     tzdata \
     php83-apache2 \
