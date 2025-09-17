@@ -29,104 +29,204 @@ else
     echo "Skipping ffmpeg installation."
 fi
 
-# Check if the required configuration is already present
-if ! grep -q "# Directory Listing Disabled" /etc/apache2/httpd.conf; then
-cat <<EOF >> /etc/apache2/httpd.conf
-# Directory Listing Disabled
-<Directory "/htdocs">
-    Options -Indexes
-    AllowOverride All
-    Require all granted
-</Directory>
+# Create nginx configuration
+cat <<EOF > /etc/nginx/nginx.conf
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
 
-# Block access to /htdocs/data except for /htdocs/data/icon
-<Directory "/htdocs/data">
-    Require all denied
-</Directory>
+events {
+    worker_connections 1024;
+}
 
-<Location "/data/icon">
-    Require all granted
-</Location>
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                    '\$status \$body_bytes_sent "\$http_referer" '
+                    '"\$http_user_agent" "\$http_x_forwarded_for"';
+
+    access_log /dev/null;
+    error_log /dev/stderr ${LOG_LEVEL};
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    server {
+        listen ${HTTP_PORT};
+        server_name ${HTTP_SERVER_NAME};
+        root /htdocs;
+        index index.php index.html index.htm;
+
+        # Disable directory listing
+        autoindex off;
+
+        # Block access to /htdocs/data except for /htdocs/data/icon
+        location /data {
+            deny all;
+        }
+
+        location /data/icon {
+            allow all;
+        }
+
+        # URL rewrite rules
+        # /tv.m3u
+        location = /tv.m3u {
+            if (\$args !~ (^|&)type=m3u(&|\$)) {
+                rewrite ^.*\$ /index.php?type=m3u&\$args last;
+            }
+        }
+
+        # /tv.txt
+        location = /tv.txt {
+            if (\$args !~ (^|&)type=txt(&|\$)) {
+                rewrite ^.*\$ /index.php?type=txt&\$args last;
+            }
+        }
+
+        # /t.xml
+        location = /t.xml {
+            if (\$args !~ (^|&)type=xml(&|\$)) {
+                rewrite ^.*\$ /index.php?type=xml&\$args last;
+            }
+        }
+
+        # /t.xml.gz
+        location = /t.xml.gz {
+            if (\$args !~ (^|&)type=gz(&|\$)) {
+                rewrite ^.*\$ /index.php?type=gz&\$args last;
+            }
+        }
+
+        # PHP handling
+        location ~ \.php\$ {
+            try_files \$uri =404;
+            fastcgi_split_path_info ^(.+\.php)(/.+)\$;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+            fastcgi_param PATH_INFO \$fastcgi_path_info;
+        }
+
+        # Static files
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js)\$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # HTTPS server configuration
+    server {
+        listen ${HTTPS_PORT} ssl;
+        server_name ${HTTPS_SERVER_NAME};
+        root /htdocs;
+        index index.php index.html index.htm;
+
+        # SSL configuration (you would need to mount certificates)
+        # ssl_certificate /path/to/certificate.crt;
+        # ssl_certificate_key /path/to/private.key;
+
+        # Disable directory listing
+        autoindex off;
+
+        # Block access to /htdocs/data except for /htdocs/data/icon
+        location /data {
+            deny all;
+        }
+
+        location /data/icon {
+            allow all;
+        }
+
+        # URL rewrite rules (same as HTTP)
+        # /tv.m3u
+        location = /tv.m3u {
+            if (\$args !~ (^|&)type=m3u(&|\$)) {
+                rewrite ^.*\$ /index.php?type=m3u&\$args last;
+            }
+        }
+
+        # /tv.txt
+        location = /tv.txt {
+            if (\$args !~ (^|&)type=txt(&|\$)) {
+                rewrite ^.*\$ /index.php?type=txt&\$args last;
+            }
+        }
+
+        # /t.xml
+        location = /t.xml {
+            if (\$args !~ (^|&)type=xml(&|\$)) {
+                rewrite ^.*\$ /index.php?type=xml&\$args last;
+            }
+        }
+
+        # /t.xml.gz
+        location = /t.xml.gz {
+            if (\$args !~ (^|&)type=gz(&|\$)) {
+                rewrite ^.*\$ /index.php?type=gz&\$args last;
+            }
+        }
+
+        # PHP handling
+        location ~ \.php\$ {
+            try_files \$uri =404;
+            fastcgi_split_path_info ^(.+\.php)(/.+)\$;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+            fastcgi_param PATH_INFO \$fastcgi_path_info;
+        }
+
+        # Static files
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js)\$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+}
 EOF
+
+# Configure PHP-FPM
+sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /usr/local/etc/php/php.ini
+sed -i "s#^;date.timezone =\$#date.timezone = \"${TZ}\"#" /usr/local/etc/php/php.ini
+sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /usr/local/etc/php/php.ini
+sed -i "s/post_max_size = .*/post_max_size = 100M/" /usr/local/etc/php/php.ini
+
+# Create php.ini from production template if it doesn't exist
+if [ ! -f /usr/local/etc/php/php.ini ]; then
+    cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
+    sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /usr/local/etc/php/php.ini
+    sed -i "s#^;date.timezone =\$#date.timezone = \"${TZ}\"#" /usr/local/etc/php/php.ini
+    sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /usr/local/etc/php/php.ini
+    sed -i "s/post_max_size = .*/post_max_size = 100M/" /usr/local/etc/php/php.ini
 fi
 
-# Write URL rewrite rules to conf.d/rewrite.conf
-cat <<'EOF' > /etc/apache2/conf.d/rewrite.conf
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # /tv.m3u
-    RewriteCond %{QUERY_STRING} !(^|&)type=m3u(&|$)
-    RewriteRule ^/tv\.m3u$ /index.php?type=m3u&%{QUERY_STRING} [L]
-
-    # /tv.txt
-    RewriteCond %{QUERY_STRING} !(^|&)type=txt(&|$)
-    RewriteRule ^/tv\.txt$ /index.php?type=txt&%{QUERY_STRING} [L]
-
-    # /t.xml
-    RewriteCond %{QUERY_STRING} !(^|&)type=xml(&|$)
-    RewriteRule ^/t\.xml$ /index.php?type=xml&%{QUERY_STRING} [L]
-
-    # /t.xml.gz
-    RewriteCond %{QUERY_STRING} !(^|&)type=gz(&|$)
-    RewriteRule ^/t\.xml\.gz$ /index.php?type=gz&%{QUERY_STRING} [L]
-</IfModule>
-EOF
-
-# Change Server Admin, Name, Document Root
-sed -i "s/ServerAdmin\ you@example.com/ServerAdmin\ ${SERVER_ADMIN}/" /etc/apache2/httpd.conf
-sed -i "s/#ServerName\ www.example.com:80/ServerName\ ${HTTP_SERVER_NAME}:${HTTP_PORT}/" /etc/apache2/httpd.conf
-sed -i 's#^DocumentRoot ".*#DocumentRoot "/htdocs"#g' /etc/apache2/httpd.conf
-sed -i 's#Directory "/var/www/localhost/htdocs"#Directory "/htdocs"#g' /etc/apache2/httpd.conf
-sed -i 's#AllowOverride None#AllowOverride All#' /etc/apache2/httpd.conf
-
-# Change TransferLog after ErrorLog
-sed -i 's#^ErrorLog .*#ErrorLog "/dev/stderr"\nTransferLog "/dev/null"#g' /etc/apache2/httpd.conf
-sed -i 's#CustomLog .* combined#CustomLog "/dev/null" combined#g' /etc/apache2/httpd.conf
-
-# SSL DocumentRoot and Log locations
-sed -i 's#^ErrorLog .*#ErrorLog "/dev/stderr"#g' /etc/apache2/conf.d/ssl.conf
-sed -i 's#^TransferLog .*#TransferLog "/dev/null"#g' /etc/apache2/conf.d/ssl.conf
-sed -i 's#^DocumentRoot ".*#DocumentRoot "/htdocs"#g' /etc/apache2/conf.d/ssl.conf
-sed -i "s/ServerAdmin\ you@example.com/ServerAdmin\ ${SERVER_ADMIN}/" /etc/apache2/conf.d/ssl.conf
-sed -i "s/ServerName\ www.example.com:443/ServerName\ ${HTTPS_SERVER_NAME}:${HTTPS_PORT}/" /etc/apache2/conf.d/ssl.conf
-
-# Re-define LogLevel
-sed -i "s#^LogLevel .*#LogLevel ${LOG_LEVEL}#g" /etc/apache2/httpd.conf
-
-# Enable commonly used apache modules
-sed -i 's/#LoadModule\ rewrite_module/LoadModule\ rewrite_module/' /etc/apache2/httpd.conf
-sed -i 's/#LoadModule\ deflate_module/LoadModule\ deflate_module/' /etc/apache2/httpd.conf
-sed -i 's/#LoadModule\ expires_module/LoadModule\ expires_module/' /etc/apache2/httpd.conf
-
-# Configure dynamic ports
-sed -i "s/^Listen 80$/Listen ${HTTP_PORT}/" /etc/apache2/httpd.conf
-sed -i "s/^Listen 443$/Listen ${HTTPS_PORT}/" /etc/apache2/conf.d/ssl.conf
-
-# Modify php memory limit, timezone and file size limit
-sed -i "s/memory_limit = .*/memory_limit = ${PHP_MEMORY_LIMIT}/" /etc/php83/php.ini
-sed -i "s#^;date.timezone =\$#date.timezone = \"${TZ}\"#" /etc/php83/php.ini
-sed -i "s/upload_max_filesize = .*/upload_max_filesize = 100M/" /etc/php83/php.ini
-sed -i "s/post_max_size = .*/post_max_size = 100M/" /etc/php83/php.ini
+# Configure PHP-FPM pool
+sed -i 's/^user = .*/user = nginx/' /usr/local/etc/php-fpm.d/www.conf
+sed -i 's/^group = .*/group = nginx/' /usr/local/etc/php-fpm.d/www.conf
+sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /usr/local/etc/php-fpm.d/www.conf
 
 # Modify system timezone
 if [ -e /etc/localtime ]; then rm -f /etc/localtime; fi
 ln -s /usr/share/zoneinfo/${TZ} /etc/localtime
 
-echo 'Running cron.php and Apache'
+echo 'Running cron.php and Nginx'
 
 # Change ownership of /htdocs
-chown -R apache:apache /htdocs
+chown -R nginx:nginx /htdocs
 
 # Start cron.php
 cd /htdocs
-su -s /bin/sh -c "php cron.php &" "apache"
+su -s /bin/sh -c "php cron.php &" "nginx"
 
-# Remove stale PID file
-if [ -f /run/apache2/httpd.pid ]; then
-    echo "Removing stale httpd PID file"
-    rm -f /run/apache2/httpd.pid
-fi
-
-# Start Memcached and Apache
-memcached -u nobody -d && httpd -D FOREGROUND
+# Start Memcached, PHP-FPM and Nginx
+memcached -u nobody -d
+php-fpm -D
+nginx -g "daemon off;"
