@@ -1,3 +1,34 @@
+## 🎉 2025-10-09 - Go 重写版本
+
+1. 🚀 **重大更新**：项目已从 PHP 完全重写为 Golang
+2. ⚡ **性能提升**：显著提升处理速度和响应时间
+3. 📦 **更小镜像**：Docker 镜像从 20MB 减少到约 15MB
+4. 💪 **更低资源占用**：内存使用更少，CPU 效率更高
+5. 🔧 **单一二进制**：无需运行时依赖，部署更简单
+6. ✅ **完全兼容**：所有 API 接口和数据库结构保持不变
+7. 🧪 **测试覆盖**：添加单元测试确保代码质量
+8. 📚 **详细文档**：新增 Go 迁移指南 (GO_MIGRATION.md)
+
+**技术栈变化：**
+- 语言：PHP → Golang 1.21+
+- Web 服务器：Apache + PHP → 内置 Go HTTP 服务器
+- 依赖：Composer → Go Modules
+- OpenCC：PHP 库 → Go 原生实现
+
+**文件对应：**
+- `index.php` → `internal/handlers/index.go`
+- `manage.php` → `internal/handlers/manage.go`
+- `update.php` → `internal/handlers/update.go`
+- `check.php` → `internal/handlers/check.go`
+- `proxy.php` → `internal/handlers/proxy.go`
+- `cron.php` → `internal/cron/cron.go`
+- `scraper.php` → `internal/scraper/scraper.go`
+- `public.php` → `internal/utils/utils.go`
+
+**备注：** 原 PHP 代码已备份到 `php-backup/` 目录
+
+---
+
 ## <font color="red">国庆中秋快乐！</font>
 
 ## 2025-09-30

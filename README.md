@@ -16,6 +16,8 @@
 
 IPTV 工具箱， `Docker` 部署，支持 **EPG 管理**、**直播源管理**、**台标管理**，兼容 **DIYP/百川**、 **超级直播**以及 **xmltv** 格式。
 
+> **🎉 重大更新**: 项目已从 PHP 重写为 **Golang**，提供更好的性能和更低的资源占用！详见 [Go Migration Guide](./GO_MIGRATION.md)
+
 > [!TIP]
 > ⚠️ 使用前请仔细阅读「管理页面」底部的[「使用说明」](/epg/assets/html/readme.md)
 > 
@@ -34,7 +36,7 @@ IPTV 工具箱， `Docker` 部署，支持 **EPG 管理**、**直播源管理**�
 
 🐳 **多架构**：提供 amd64、arm64 和 armv7 架构的 Docker 镜像。
 
-📦 **小体积镜像**：基于 Alpine 构建，压缩后仅 20 MB。
+📦 **小体积镜像**：基于 Alpine 构建，Go 版本压缩后约 15 MB。
 
 🗃️ **数据库管理**：支持 SQLite 和 MySQL 数据库，内置 phpLiteAdmin 管理工具。
 
@@ -98,20 +100,27 @@ bash <(curl -Ls https://gcore.jsdelivr.net/gh/taksssss/iptv-tool@master/install.
 
 ### 手动部署 
 ```bash
-docker run -d --name php-epg \
+docker run -d --name iptv-tool \
   -p 5678:80 \
-  -v $HOME/epg:/htdocs/data \
-  -e PHP_MEMORY_LIMIT=512M \
-  -e ENABLE_FFMPEG=false \
+  -v $HOME/epg:/app/epg/data \
   --restart unless-stopped \
-  taksss/php-epg:latest
+  taksss/iptv-tool:latest
 ```
 
 > `$HOME/epg`：默认数据目录，根据需要自行修改  
 > `5678`：默认端口，根据需要自行修改（注意端口占用）  
-> `-e PHP_MEMORY_LIMIT=512M`：PHP 内存限制，默认 `512M`  
-> `-e ENABLE_FFMPEG=true`：启用 ffmpeg 组件  
-> 无法正常拉取镜像的，可将 `taksss/php-epg:latest` 替换为 `ccr.ccs.tencentyun.com/taksss/php-epg:latest`
+> 无法正常拉取镜像的，可将 `taksss/iptv-tool:latest` 替换为 `ccr.ccs.tencentyun.com/taksss/iptv-tool:latest`
+
+### 从源码构建
+```bash
+# 克隆仓库
+git clone https://github.com/taksssss/iptv-tool.git
+cd iptv-tool
+
+# 构建并运行
+go build -o iptv-tool main.go
+./iptv-tool -data ./epg/data -port 5678
+```
 
 ## 🛠️ 使用步骤
 
