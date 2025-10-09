@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/taksssss/iptv-tool/internal/config"
+	"github.com/taksssss/iptv-tool/internal/cron"
 	"github.com/taksssss/iptv-tool/internal/database"
 	"github.com/taksssss/iptv-tool/internal/server"
 )
@@ -33,6 +34,12 @@ func main() {
 	// Set up icon directories and other data directories
 	if err := setupDirectories(*dataDir); err != nil {
 		log.Fatalf("Failed to setup directories: %v", err)
+	}
+
+	// Start cron service if configured
+	cronService := cron.NewService(cfg, db)
+	if err := cronService.Start(); err != nil {
+		log.Printf("Warning: Failed to start cron service: %v", err)
 	}
 
 	// Start HTTP server

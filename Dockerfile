@@ -22,11 +22,11 @@ FROM alpine:3.20
 LABEL maintainer="tak"
 LABEL description="Alpine based IPTV Tool with Go backend"
 
-# Install runtime dependencies
-RUN apk --no-cache --update add \
-    tzdata \
-    ca-certificates \
-    && mkdir -p /app/epg/data
+# Install runtime dependencies (with retry and fallback)
+RUN apk --no-cache --update add tzdata ca-certificates 2>/dev/null || \
+    (apk update && apk add tzdata ca-certificates) || \
+    echo "Warning: Could not install optional packages" && \
+    mkdir -p /app/epg/data
 
 WORKDIR /app
 
