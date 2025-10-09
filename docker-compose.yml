@@ -1,10 +1,13 @@
 services:
-  php-epg:
-    image: taksss/php-epg:latest
-    container_name: php-epg
+  iptv-tool:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: taksss/iptv-tool:latest
+    container_name: iptv-tool
     # 数据目录映射
     volumes:
-      - $HOME/epg:/htdocs/data
+      - $HOME/epg:/app/epg/data
     # 默认端口 5678
     ports:
       - "5678:80"

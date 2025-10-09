@@ -1,55 +1,44 @@
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o iptv-tool main.go
+
+# Runtime stage
 FROM alpine:3.20
-LABEL maintainer="erik.soderblom@gmail.com"
-LABEL description="Alpine based image with apache2 and php8.3."
 
-# MOD: Tak
+LABEL maintainer="tak"
+LABEL description="Alpine based IPTV Tool with Go backend"
 
-# 使用中科大镜像（改用GitHub Actions，无需镜像）
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
-
-# 安装 Apache 和 PHP
-RUN apk --no-cache --update \
-    add apache2 \
-    apache2-ssl \
-    curl \
-    memcached \
+# Install runtime dependencies
+RUN apk --no-cache --update add \
     tzdata \
-    php83-apache2 \
-    php83-bcmath \
-    php83-bz2 \
-    php83-calendar \
-    php83-common \
-    php83-ctype \
-    php83-curl \
-    php83-dom \
-    php83-gd \
-    php83-iconv \
-    php83-mbstring \
-    php83-mysqli \
-    php83-mysqlnd \
-    php83-openssl \
-    php83-pdo_mysql \
-    php83-pdo_pgsql \
-    php83-pdo_sqlite \
-    php83-phar \
-    php83-session \
-    php83-xml \
-    php83-xmlreader \
-    php83-xmlwriter \
-    php83-simplexml \
-    php83-json \
-    php83-posix \
-    php83-zip \
-    php83-pecl-memcached \
-    php83-pecl-redis \
-    && mkdir /htdocs
+    ca-certificates \
+    && mkdir -p /app/epg/data
 
-# 复制 ./epg 文件夹内容到 /htdocs
-COPY ./epg /htdocs
+WORKDIR /app
 
-EXPOSE 80 443
+# Copy binary from builder
+COPY --from=builder /build/iptv-tool /app/
 
-ADD docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
+# Copy static assets
+COPY epg/assets /app/epg/assets/
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Set timezone
+ENV TZ=Asia/Shanghai
+
+EXPOSE 80
+
+ENTRYPOINT ["/app/iptv-tool", "-data", "/app/epg/data", "-port", "80"]
