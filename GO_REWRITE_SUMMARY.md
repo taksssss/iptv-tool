@@ -388,6 +388,6 @@ go tool pprof mem.prof
 
 **项目状态**: 核心功能完成，可用于生产环境 ✅
 
-**贡献者**: Copilot + taksssss
+**贡献者**: GitHub Copilot + taksssss
 
 **日期**: 2025-10-09
