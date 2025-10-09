@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/liuzl/gocc"
 	"github.com/taksssss/iptv-tool/internal/config"
 )
 
@@ -114,8 +115,7 @@ func CleanChannelName(channel string, t2s bool, cfg *config.Config) string {
 
 	// Traditional to Simplified Chinese conversion
 	if t2s {
-		// TODO: Implement OpenCC conversion
-		// For now, just return as-is
+		normalizedChannel = T2S(normalizedChannel)
 	}
 
 	return strings.ToUpper(normalizedChannel)
@@ -248,4 +248,20 @@ func DownloadFile(url string, timeout int) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+// T2S converts Traditional Chinese to Simplified Chinese
+func T2S(text string) string {
+	cc, err := gocc.New("t2s")
+	if err != nil {
+		// If conversion fails, return original text
+		return text
+	}
+	
+	result, err := cc.Convert(text)
+	if err != nil {
+		return text
+	}
+	
+	return result
 }
