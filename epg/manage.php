@@ -427,7 +427,17 @@ try {
                     $configOptionsHtml .= "<option value=\"$label\" $selected>$display</option>\n";
                 }
 
-                // 读取频道数据，并合并测速信息
+                // 获取分页参数
+                $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                $perPage = isset($_GET['per_page']) ? max(1, min(1000, intval($_GET['per_page']))) : 100;
+                $offset = ($page - 1) * $perPage;
+
+                // 获取总数
+                $countStmt = $db->prepare("SELECT COUNT(*) FROM channels WHERE config = ?");
+                $countStmt->execute([$liveSourceConfig]);
+                $totalCount = $countStmt->fetchColumn();
+
+                // 读取频道数据（分页），并合并测速信息
                 $stmt = $db->prepare("
                     SELECT 
                         c.*, 
@@ -439,8 +449,9 @@ try {
                     FROM channels c
                     LEFT JOIN channels_info ci ON c.streamUrl = ci.streamUrl
                     WHERE c.config = ?
+                    LIMIT ? OFFSET ?
                 ");
-                $stmt->execute([$liveSourceConfig]);
+                $stmt->execute([$liveSourceConfig, $perPage, $offset]);
                 $channelsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 $dbResponse = [
@@ -448,6 +459,9 @@ try {
                     'template_content' => $templateContent,
                     'channels' => $channelsData,
                     'config_options_html' => $configOptionsHtml,
+                    'total_count' => $totalCount,
+                    'page' => $page,
+                    'per_page' => $perPage,
                 ];
                 break;
 
@@ -942,8 +956,61 @@ try {
             
                 // 保存直播源信息
                 $content = json_decode($_POST['content'], true);
-                generateLiveFiles($content, 'tv', $saveOnly = true); // 重新生成 M3U 和 TXT 文件
-                echo json_encode(['success' => true]);
+                
+                // 检查是否为批量更新模式（仅更新修改的记录）
+                if (isset($_POST['batch_update']) && $_POST['batch_update'] === 'true') {
+                    // 批量更新模式：仅更新传入的记录
+                    $liveSourceConfig = $_POST['live_source_config'];
+                    
+                    try {
+                        $db->beginTransaction();
+                        
+                        foreach ($content as $item) {
+                            // 使用 tag 作为唯一标识符更新记录
+                            if (isset($item['tag'])) {
+                                $stmt = $db->prepare("
+                                    UPDATE channels 
+                                    SET groupPrefix = ?, groupTitle = ?, channelName = ?, chsChannelName = ?,
+                                        streamUrl = ?, iconUrl = ?, tvgId = ?, tvgName = ?, 
+                                        disable = ?, modified = ?
+                                    WHERE tag = ? AND config = ?
+                                ");
+                                $stmt->execute([
+                                    $item['groupPrefix'] ?? '',
+                                    $item['groupTitle'] ?? '',
+                                    $item['channelName'] ?? '',
+                                    $item['chsChannelName'] ?? '',
+                                    $item['streamUrl'] ?? '',
+                                    $item['iconUrl'] ?? '',
+                                    $item['tvgId'] ?? '',
+                                    $item['tvgName'] ?? '',
+                                    $item['disable'] ?? 0,
+                                    $item['modified'] ?? 0,
+                                    $item['tag'],
+                                    $liveSourceConfig
+                                ]);
+                            }
+                        }
+                        
+                        $db->commit();
+                        
+                        // 重新生成 M3U 和 TXT 文件（需要读取所有数据）
+                        $stmt = $db->prepare("SELECT * FROM channels WHERE config = ?");
+                        $stmt->execute([$liveSourceConfig]);
+                        $allChannels = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        generateLiveFiles($allChannels, 'tv', $saveOnly = true);
+                        
+                        echo json_encode(['success' => true]);
+                    } catch (Exception $e) {
+                        $db->rollBack();
+                        http_response_code(500);
+                        echo json_encode(['success' => false, 'message' => '保存失败: ' . $e->getMessage()]);
+                    }
+                } else {
+                    // 原有模式：全量保存（向后兼容）
+                    generateLiveFiles($content, 'tv', $saveOnly = true);
+                    echo json_encode(['success' => true]);
+                }
                 exit;
 
             case 'update_config_field':

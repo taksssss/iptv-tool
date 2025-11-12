@@ -252,7 +252,11 @@ function showModal(type, popup = true, data = '') {
             break;
         case 'live':
             modal = document.getElementById("liveSourceManageModal");
-            fetchData('manage.php?get_live_data=true', updateLiveSourceModal);
+            // 重置数据并加载第一页
+            allLiveData = [];
+            filteredLiveData = [];
+            currentPage = 1;
+            fetchData(`manage.php?get_live_data=true&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
             break;
         case 'chekspeed':
             modal = document.getElementById("checkSpeedModal");
@@ -893,6 +897,12 @@ function updateGenList(genData) {
 
 // 显示指定页码的数据
 function displayPage(data, page) {
+    // 如果启用了服务器端分页且需要的数据不在本地缓存中
+    if (window.liveDataServerPagination && data === filteredLiveData && !isPageDataLoaded(page)) {
+        loadPageDataFromServer(page);
+        return;
+    }
+    
     const tableBody = document.querySelector('#liveSourceTable tbody');
     tableBody.innerHTML = ''; // 清空表格内容
 
@@ -997,12 +1007,46 @@ function displayPage(data, page) {
     })
 }
 
+// 检查某一页的数据是否已加载到本地缓存
+function isPageDataLoaded(page) {
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    
+    // 检查该范围的数据是否都存在
+    for (let i = start; i < end && i < (window.liveDataTotalCount || 0); i++) {
+        if (!allLiveData[i] || !allLiveData[i].tag) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// 从服务器加载指定页的数据
+function loadPageDataFromServer(page) {
+    const selectedConfig = document.getElementById('live_source_config').value;
+    const tableBody = document.querySelector('#liveSourceTable tbody');
+    tableBody.innerHTML = '<tr><td colspan="11">加载中...</td></tr>';
+    
+    fetch(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=${page}&per_page=${rowsPerPage}`)
+        .then(response => response.json())
+        .then(data => {
+            updateLiveSourceModal(data);
+        })
+        .catch(error => {
+            console.error('Error loading page data:', error);
+            tableBody.innerHTML = '<tr><td colspan="11">加载失败，请重试</td></tr>';
+        });
+}
+
 // 创建分页控件
 function setupPagination(data) {
     const paginationContainer = document.getElementById('paginationContainer');
     paginationContainer.innerHTML = ''; // 清空分页容器
 
-    const totalPages = Math.ceil(data.length / rowsPerPage);
+    // 使用服务器端总数（如果可用）或本地数据长度
+    const totalItems = window.liveDataServerPagination ? (window.liveDataTotalCount || 0) : data.length;
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    
     if (totalPages <= 1) return;
 
     const maxButtons = 11; // 总显示按钮数，包括“<”和“>”
@@ -1081,18 +1125,52 @@ function updateLiveSourceModal(data) {
     document.getElementById('sourceUrlTextarea').value = data.source_content || '';
     document.getElementById('liveTemplateTextarea').value = data.template_content || '';
     document.getElementById('live_source_config').innerHTML = data.config_options_html;
+    
     const channels = Array.isArray(data.channels) ? data.channels : [];
-    allLiveData = channels;  // 将所有数据保存在全局变量中
+    
+    // 如果是服务器端分页模式（有 total_count）
+    if (data.total_count !== undefined) {
+        // 合并新获取的数据到 allLiveData
+        // 使用 tag 作为唯一标识，避免重复
+        const existingTags = new Set(allLiveData.map(item => item.tag));
+        channels.forEach(channel => {
+            if (!existingTags.has(channel.tag)) {
+                allLiveData.push(channel);
+            } else {
+                // 更新已存在的记录
+                const index = allLiveData.findIndex(item => item.tag === channel.tag);
+                if (index !== -1) {
+                    allLiveData[index] = channel;
+                }
+            }
+        });
+        
+        // 设置总数和分页信息
+        window.liveDataTotalCount = data.total_count;
+        window.liveDataServerPagination = true;
+        window.liveDataCurrentPage = data.page || 1;
+        window.liveDataPerPage = data.per_page || 100;
+    } else {
+        // 兼容旧模式：一次性加载所有数据
+        allLiveData = channels;
+        window.liveDataServerPagination = false;
+    }
+    
     filteredLiveData = allLiveData; // 初始化过滤结果
     currentPage = 1; // 重置为第一页
-    displayPage(channels, currentPage); // 显示第一页数据
-    setupPagination(channels); // 初始化分页控件
+    displayPage(filteredLiveData, currentPage); // 显示第一页数据
+    setupPagination(filteredLiveData); // 初始化分页控件
 }
 
 // 更新直播源配置
 function onLiveSourceConfigChange() {
     const selectedConfig = document.getElementById('live_source_config').value;
-    fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}`, updateLiveSourceModal);
+    // 重置数据
+    allLiveData = [];
+    filteredLiveData = [];
+    currentPage = 1;
+    // 获取第一页数据
+    fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
 }
 
 // 上传直播源文件
@@ -1161,6 +1239,13 @@ function saveLiveSourceInfo() {
     const liveTvgIdEnable = document.getElementById('live_tvg_id_enable').value;
     const liveTvgNameEnable = document.getElementById('live_tvg_name_enable').value;
 
+    // 如果使用服务器端分页，只发送修改过的记录
+    const dataToSend = window.liveDataServerPagination 
+        ? allLiveData.filter(item => item.modified == 1)
+        : allLiveData;
+    
+    const useBatchUpdate = window.liveDataServerPagination && dataToSend.length > 0;
+
     // 保存直播源信息
     fetch('manage.php', {
         method: 'POST',
@@ -1171,12 +1256,25 @@ function saveLiveSourceInfo() {
             live_tvg_logo_enable: liveTvgLogoEnable,
             live_tvg_id_enable: liveTvgIdEnable,
             live_tvg_name_enable: liveTvgNameEnable,
-            content: JSON.stringify(allLiveData)
+            content: JSON.stringify(dataToSend),
+            batch_update: useBatchUpdate ? 'true' : 'false'
         })
     })
     .then(response => response.json())
     .then(data => {
-        showMessageModal(data.success ? '保存成功<br>已生成 M3U 及 TXT 文件' : '保存失败');
+        if (data.success) {
+            showMessageModal('保存成功<br>已生成 M3U 及 TXT 文件');
+            // 清除修改标记
+            allLiveData.forEach(item => {
+                if (item.modified == 1) {
+                    item.modified = 0;
+                }
+            });
+            // 刷新当前页显示
+            displayPage(filteredLiveData, currentPage);
+        } else {
+            showMessageModal('保存失败');
+        }
     })
     .catch(error => {
         showMessageModal('保存过程中出现错误: ' + error);
