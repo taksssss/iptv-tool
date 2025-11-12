@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV 直播源分页管理测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .control-panel {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        .control-panel label {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .control-panel input {
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .control-panel button {
+            padding: 8px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .control-panel button:hover {
+            background: #0056b3;
+        }
+        #progress {
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #log {
+            border: 1px solid #ddd;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fff;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #log div {
+            margin: 2px 0;
+            padding: 2px 0;
+            border-bottom: 1px dotted #eee;
+        }
+        h1 {
+            color: #333;
+        }
+        .info {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>IPTV 直播源分页管理测试</h1>
+    
+    <div class="info">
+        <strong>说明：</strong>此页面用于测试分页获取和保存直播源功能。
+    </div>
+
+    <div class="control-panel">
+        <label for="pageSizeInput">每页大小：</label>
+        <input type="number" id="pageSizeInput" value="200" min="1" max="1000">
+        
+        <button id="startPagedSync">开始分页同步</button>
+        <button onclick="document.getElementById('log').innerHTML=''; document.getElementById('progress').innerHTML='';">清空日志</button>
+    </div>
+
+    <div id="progress"></div>
+    <div id="log"></div>
+
+    <!-- Include jQuery for fallback support -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="manage.js"></script>
+
+    <script>
+        // Display initial message
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('log').innerHTML = '<div>准备就绪，点击"开始分页同步"按钮开始处理...</div>';
+        });
+    </script>
+</body>
+</html>
