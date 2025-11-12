@@ -256,6 +256,8 @@ function showModal(type, popup = true, data = '') {
             allLiveData = [];
             filteredLiveData = [];
             currentPage = 1;
+            window.liveDataMap = new Map();
+            window.loadedPages = new Set();
             fetchData(`manage.php?get_live_data=true&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
             break;
         case 'chekspeed':
@@ -910,7 +912,7 @@ function displayPage(data, page) {
     const end = Math.min(start + rowsPerPage, data.length);
 
     if (data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="11">暂无数据</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="12">暂无数据</td></tr>';
         return;
     }
 
@@ -953,9 +955,20 @@ function displayPage(data, page) {
                 const currentIndex = (currentPage - 1) * rowsPerPage + index;
                 const item = filteredLiveData[currentIndex]; // 当前点击的数据
                 const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
-                if (dataIndex < allLiveData.length) {
+                if (dataIndex >= 0 && dataIndex < allLiveData.length) {
                     allLiveData[dataIndex][columns[columnIndex]] = cell.textContent.trim();
                     allLiveData[dataIndex]['modified'] = 1; // 标记修改位
+                    
+                    // 同时更新Map
+                    if (window.liveDataMap && item.tag) {
+                        const mapItem = window.liveDataMap.get(item.tag);
+                        if (mapItem) {
+                            mapItem[columns[columnIndex]] = cell.textContent.trim();
+                            mapItem['modified'] = 1;
+                            window.liveDataMap.set(item.tag, mapItem);
+                        }
+                    }
+                    
                     const lastCell = cell.closest('tr').lastElementChild;
                     lastCell.textContent = '是';
                     lastCell.classList.add('table-cell-modified');
@@ -969,16 +982,36 @@ function displayPage(data, page) {
                 const currentIndex = (currentPage - 1) * rowsPerPage + index;
                 const item = filteredLiveData[currentIndex]; // 当前点击的数据
                 const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
-                if (dataIndex < allLiveData.length) {
+                if (dataIndex >= 0 && dataIndex < allLiveData.length) {
                     const isDisable = columnIndex === 0;
                     const field = isDisable ? 'disable' : 'modified';
                     const newValue = allLiveData[dataIndex][field] == 1 ? 0 : 1;
                     allLiveData[dataIndex][field] = newValue;
+                    
+                    // 同时更新Map
+                    if (window.liveDataMap && item.tag) {
+                        const mapItem = window.liveDataMap.get(item.tag);
+                        if (mapItem) {
+                            mapItem[field] = newValue;
+                            window.liveDataMap.set(item.tag, mapItem);
+                        }
+                    }
+                    
                     cell.textContent = newValue == 1 ? '是' : '否';
 
                     if (isDisable) {
                         cell.classList.toggle('table-cell-disable', newValue == 1);
                         allLiveData[dataIndex]['modified'] = 1; // 标记修改位
+                        
+                        // 同时更新Map中的modified标记
+                        if (window.liveDataMap && item.tag) {
+                            const mapItem = window.liveDataMap.get(item.tag);
+                            if (mapItem) {
+                                mapItem['modified'] = 1;
+                                window.liveDataMap.set(item.tag, mapItem);
+                            }
+                        }
+                        
                         const lastCell = cell.closest('tr').lastElementChild;
                         lastCell.textContent = '是';
                         lastCell.classList.add('table-cell-modified');
@@ -1009,23 +1042,19 @@ function displayPage(data, page) {
 
 // 检查某一页的数据是否已加载到本地缓存
 function isPageDataLoaded(page) {
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    
-    // 检查该范围的数据是否都存在
-    for (let i = start; i < end && i < (window.liveDataTotalCount || 0); i++) {
-        if (!allLiveData[i] || !allLiveData[i].tag) {
-            return false;
-        }
+    if (!window.liveDataServerPagination) {
+        return true; // 非服务器端分页模式，数据都已加载
     }
-    return true;
+    return window.loadedPages && window.loadedPages.has(page);
 }
 
 // 从服务器加载指定页的数据
 function loadPageDataFromServer(page) {
     const selectedConfig = document.getElementById('live_source_config').value;
     const tableBody = document.querySelector('#liveSourceTable tbody');
-    tableBody.innerHTML = '<tr><td colspan="11">加载中...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="12">加载中...</td></tr>';
+    
+    currentPage = page; // 更新当前页码
     
     fetch(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=${page}&per_page=${rowsPerPage}`)
         .then(response => response.json())
@@ -1034,7 +1063,7 @@ function loadPageDataFromServer(page) {
         })
         .catch(error => {
             console.error('Error loading page data:', error);
-            tableBody.innerHTML = '<tr><td colspan="11">加载失败，请重试</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="12">加载失败，请重试</td></tr>';
         });
 }
 
@@ -1130,35 +1159,42 @@ function updateLiveSourceModal(data) {
     
     // 如果是服务器端分页模式（有 total_count）
     if (data.total_count !== undefined) {
-        // 合并新获取的数据到 allLiveData
-        // 使用 tag 作为唯一标识，避免重复
-        const existingTags = new Set(allLiveData.map(item => item.tag));
+        // 初始化数据结构（如果还未初始化）
+        if (!window.liveDataMap) {
+            window.liveDataMap = new Map();
+        }
+        if (!window.loadedPages) {
+            window.loadedPages = new Set();
+        }
+        
+        // 存储当前页的数据到Map中，使用tag作为key
         channels.forEach(channel => {
-            if (!existingTags.has(channel.tag)) {
-                allLiveData.push(channel);
-            } else {
-                // 更新已存在的记录
-                const index = allLiveData.findIndex(item => item.tag === channel.tag);
-                if (index !== -1) {
-                    allLiveData[index] = channel;
-                }
+            if (channel.tag) {
+                window.liveDataMap.set(channel.tag, channel);
             }
         });
+        
+        // 标记当前页已加载
+        const currentPageNum = data.page || 1;
+        window.loadedPages.add(currentPageNum);
         
         // 设置总数和分页信息
         window.liveDataTotalCount = data.total_count;
         window.liveDataServerPagination = true;
-        window.liveDataCurrentPage = data.page || 1;
         window.liveDataPerPage = data.per_page || 100;
+        
+        // 从Map重建allLiveData数组
+        allLiveData = Array.from(window.liveDataMap.values());
     } else {
         // 兼容旧模式：一次性加载所有数据
         allLiveData = channels;
         window.liveDataServerPagination = false;
+        window.liveDataMap = null;
+        window.loadedPages = null;
     }
     
     filteredLiveData = allLiveData; // 初始化过滤结果
-    currentPage = 1; // 重置为第一页
-    displayPage(filteredLiveData, currentPage); // 显示第一页数据
+    displayPage(filteredLiveData, currentPage); // 显示当前页数据
     setupPagination(filteredLiveData); // 初始化分页控件
 }
 
@@ -1169,6 +1205,8 @@ function onLiveSourceConfigChange() {
     allLiveData = [];
     filteredLiveData = [];
     currentPage = 1;
+    window.liveDataMap = new Map();
+    window.loadedPages = new Set();
     // 获取第一页数据
     fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
 }
@@ -1244,7 +1282,8 @@ function saveLiveSourceInfo() {
         ? allLiveData.filter(item => item.modified == 1)
         : allLiveData;
     
-    const useBatchUpdate = window.liveDataServerPagination && dataToSend.length > 0;
+    // 服务器端分页模式下总是使用批量更新
+    const useBatchUpdate = window.liveDataServerPagination;
 
     // 保存直播源信息
     fetch('manage.php', {
@@ -1265,11 +1304,25 @@ function saveLiveSourceInfo() {
         if (data.success) {
             showMessageModal('保存成功<br>已生成 M3U 及 TXT 文件');
             // 清除修改标记
-            allLiveData.forEach(item => {
-                if (item.modified == 1) {
-                    item.modified = 0;
-                }
-            });
+            if (window.liveDataMap) {
+                // 使用Map更新
+                window.liveDataMap.forEach((item, tag) => {
+                    if (item.modified == 1) {
+                        item.modified = 0;
+                        window.liveDataMap.set(tag, item);
+                    }
+                });
+                // 重建allLiveData数组
+                allLiveData = Array.from(window.liveDataMap.values());
+                filteredLiveData = allLiveData;
+            } else {
+                // 原有模式
+                allLiveData.forEach(item => {
+                    if (item.modified == 1) {
+                        item.modified = 0;
+                    }
+                });
+            }
             // 刷新当前页显示
             displayPage(filteredLiveData, currentPage);
         } else {
