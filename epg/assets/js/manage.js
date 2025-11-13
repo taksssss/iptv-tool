@@ -901,8 +901,8 @@ function updateGenList(genData) {
 
 // 显示指定页码的数据
 function displayPage(data, page) {
-    // 如果启用了服务器端分页且需要的数据不在本地缓存中
-    if (window.liveDataServerPagination && data === filteredLiveData && !isPageDataLoaded(page)) {
+    // 如果需要的数据不在本地缓存中，从服务器加载
+    if (data === filteredLiveData && !isPageDataLoaded(page)) {
         loadPageDataFromServer(page);
         return;
     }
@@ -910,21 +910,10 @@ function displayPage(data, page) {
     const tableBody = document.querySelector('#liveSourceTable tbody');
     tableBody.innerHTML = ''; // 清空表格内容
 
-    let displayData;
-    let startIndex = 0;
-    
-    if (window.liveDataServerPagination && data === filteredLiveData) {
-        // 服务器端分页模式：从pageDataMap获取当前页的数据
-        displayData = window.pageDataMap && window.pageDataMap.get(page) 
-            ? window.pageDataMap.get(page) 
-            : [];
-    } else {
-        // 客户端分页模式：使用slice获取当前页数据
-        const start = (page - 1) * rowsPerPage;
-        const end = Math.min(start + rowsPerPage, data.length);
-        displayData = data.slice(start, end);
-        startIndex = start;
-    }
+    // 从pageDataMap获取当前页的数据
+    const displayData = window.pageDataMap && window.pageDataMap.get(page) 
+        ? window.pageDataMap.get(page) 
+        : [];
 
     if (displayData.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="12">暂无数据</td></tr>';
@@ -940,9 +929,7 @@ function displayPage(data, page) {
         const row = document.createElement('tr');
         
         // 计算全局索引（用于行号显示）
-        const globalIndex = window.liveDataServerPagination 
-            ? (page - 1) * rowsPerPage + index + 1
-            : startIndex + index + 1;
+        const globalIndex = (page - 1) * rowsPerPage + index + 1;
         
         // 检查该项是否在客户端被修改过
         const isClientModified = window.clientModifiedTags && window.clientModifiedTags.has(item.tag);
@@ -1102,9 +1089,6 @@ function displayPage(data, page) {
 
 // 检查某一页的数据是否已加载到本地缓存
 function isPageDataLoaded(page) {
-    if (!window.liveDataServerPagination) {
-        return true; // 非服务器端分页模式，数据都已加载
-    }
     return window.loadedPages && window.loadedPages.has(page);
 }
 
@@ -1132,8 +1116,8 @@ function setupPagination(data) {
     const paginationContainer = document.getElementById('paginationContainer');
     paginationContainer.innerHTML = ''; // 清空分页容器
 
-    // 使用服务器端总数（如果可用）或本地数据长度
-    const totalItems = window.liveDataServerPagination ? (window.liveDataTotalCount || 0) : data.length;
+    // 使用服务器端总数
+    const totalItems = window.liveDataTotalCount || 0;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     
     if (totalPages <= 1) return;
@@ -1222,48 +1206,37 @@ function updateLiveSourceModal(data) {
         window.clientModifiedTags = new Set();
     }
     
-    // 如果是服务器端分页模式（有 total_count）
-    if (data.total_count !== undefined) {
-        // 初始化数据结构（如果还未初始化）
-        if (!window.liveDataMap) {
-            window.liveDataMap = new Map();
-        }
-        if (!window.loadedPages) {
-            window.loadedPages = new Set();
-        }
-        if (!window.pageDataMap) {
-            window.pageDataMap = new Map(); // 存储每页的数据
-        }
-        
-        // 存储当前页的数据到Map中，使用tag作为key
-        channels.forEach(channel => {
-            if (channel.tag) {
-                window.liveDataMap.set(channel.tag, channel);
-            }
-        });
-        
-        // 存储当前页的数据列表
-        const currentPageNum = data.page || 1;
-        window.pageDataMap.set(currentPageNum, channels);
-        
-        // 标记当前页已加载
-        window.loadedPages.add(currentPageNum);
-        
-        // 设置总数和分页信息
-        window.liveDataTotalCount = data.total_count;
-        window.liveDataServerPagination = true;
-        window.liveDataPerPage = data.per_page || 100;
-        
-        // 从Map重建allLiveData数组
-        allLiveData = Array.from(window.liveDataMap.values());
-    } else {
-        // 兼容旧模式：一次性加载所有数据
-        allLiveData = channels;
-        window.liveDataServerPagination = false;
-        window.liveDataMap = null;
-        window.loadedPages = null;
-        window.pageDataMap = null;
+    // 初始化数据结构（如果还未初始化）
+    if (!window.liveDataMap) {
+        window.liveDataMap = new Map();
     }
+    if (!window.loadedPages) {
+        window.loadedPages = new Set();
+    }
+    if (!window.pageDataMap) {
+        window.pageDataMap = new Map(); // 存储每页的数据
+    }
+    
+    // 存储当前页的数据到Map中，使用tag作为key
+    channels.forEach(channel => {
+        if (channel.tag) {
+            window.liveDataMap.set(channel.tag, channel);
+        }
+    });
+    
+    // 存储当前页的数据列表
+    const currentPageNum = data.page || 1;
+    window.pageDataMap.set(currentPageNum, channels);
+    
+    // 标记当前页已加载
+    window.loadedPages.add(currentPageNum);
+    
+    // 设置总数和分页信息
+    window.liveDataTotalCount = data.total_count;
+    window.liveDataPerPage = data.per_page || 100;
+    
+    // 从Map重建allLiveData数组
+    allLiveData = Array.from(window.liveDataMap.values());
     
     filteredLiveData = allLiveData; // 初始化过滤结果
     displayPage(filteredLiveData, currentPage); // 显示当前页数据
@@ -1351,13 +1324,8 @@ function saveLiveSourceInfo() {
     const liveTvgIdEnable = document.getElementById('live_tvg_id_enable').value;
     const liveTvgNameEnable = document.getElementById('live_tvg_name_enable').value;
 
-    // 如果使用服务器端分页，只发送客户端修改过的记录
-    const dataToSend = window.liveDataServerPagination 
-        ? allLiveData.filter(item => window.clientModifiedTags && window.clientModifiedTags.has(item.tag))
-        : allLiveData;
-    
-    // 服务器端分页模式下总是使用批量更新
-    const useBatchUpdate = window.liveDataServerPagination;
+    // 只发送客户端修改过的记录
+    const dataToSend = allLiveData.filter(item => window.clientModifiedTags && window.clientModifiedTags.has(item.tag));
 
     // 保存直播源信息
     fetch('manage.php', {
@@ -1370,7 +1338,7 @@ function saveLiveSourceInfo() {
             live_tvg_id_enable: liveTvgIdEnable,
             live_tvg_name_enable: liveTvgNameEnable,
             content: JSON.stringify(dataToSend),
-            batch_update: useBatchUpdate ? 'true' : 'false'
+            batch_update: 'true'
         })
     })
     .then(response => response.json())
