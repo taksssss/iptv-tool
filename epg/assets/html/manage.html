@@ -405,7 +405,7 @@
 
         <!-- 搜索框 -->
         <div>
-            <input type="text" id="liveSourceSearchInput" placeholder="搜索分组前缀、分组名称、频道名称、直播地址、tvg-id、tvg-name..." oninput="filterLiveSourceData()">
+            <input type="text" id="liveSourceSearchInput" placeholder="搜索分组前缀、分组名称、频道名称、直播地址、tvg-id、tvg-name（按回车搜索）..." onkeypress="if(event.key === 'Enter') filterLiveSourceData()">
         </div>
 
         <!-- 表格显示解析结果 -->

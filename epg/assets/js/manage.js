@@ -260,6 +260,7 @@ function showModal(type, popup = true, data = '') {
             window.loadedPages = new Set();
             window.pageDataMap = new Map();
             window.clientModifiedTags = new Set();
+            window.currentSearchKeyword = ''; // 清除搜索关键词
             fetchData(`manage.php?get_live_data=true&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
             break;
         case 'chekspeed':
@@ -904,26 +905,16 @@ function displayPage(data, page) {
     const tableBody = document.querySelector('#liveSourceTable tbody');
     tableBody.innerHTML = ''; // 清空表格内容
 
-    let displayData;
-    
-    // 检查是否是搜索结果（filteredLiveData !== allLiveData表示正在搜索）
-    const isSearching = data !== allLiveData && data === filteredLiveData;
-    
-    if (isSearching) {
-        // 搜索模式：使用客户端分页
-        const start = (page - 1) * rowsPerPage;
-        const end = Math.min(start + rowsPerPage, data.length);
-        displayData = data.slice(start, end);
-    } else if (data === filteredLiveData && !isPageDataLoaded(page)) {
-        // 服务器端分页模式：需要从服务器加载数据
+    // 如果需要的数据不在本地缓存中，从服务器加载
+    if (data === filteredLiveData && !isPageDataLoaded(page)) {
         loadPageDataFromServer(page);
         return;
-    } else {
-        // 从pageDataMap获取当前页的数据
-        displayData = window.pageDataMap && window.pageDataMap.get(page) 
-            ? window.pageDataMap.get(page) 
-            : [];
     }
+    
+    // 从pageDataMap获取当前页的数据
+    const displayData = window.pageDataMap && window.pageDataMap.get(page) 
+        ? window.pageDataMap.get(page) 
+        : [];
 
     if (displayData.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="12">暂无数据</td></tr>';
@@ -958,11 +949,6 @@ function displayPage(data, page) {
                         : (col === 'modified' && item[col] == 1)
                         ? 'table-cell-modified'
                         : 'table-cell-clickable';
-                }
-                
-                // 如果是modified列且有客户端修改，添加额外样式提示
-                if (col === 'modified' && isClientModified) {
-                    cellClass += ' table-cell-client-modified';
                 }
         
                 const editable = ['resolution', 'speed', 'disable', 'modified'].includes(col) ? '' : 'contenteditable="true"';
@@ -1129,7 +1115,13 @@ function loadPageDataFromServer(page) {
     
     currentPage = page; // 更新当前页码
     
-    fetch(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=${page}&per_page=${rowsPerPage}`)
+    // 构建URL，包含搜索关键词（如果有）
+    let url = `manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=${page}&per_page=${rowsPerPage}`;
+    if (window.currentSearchKeyword) {
+        url += `&search=${encodeURIComponent(window.currentSearchKeyword)}`;
+    }
+    
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             updateLiveSourceModal(data);
@@ -1145,11 +1137,8 @@ function setupPagination(data) {
     const paginationContainer = document.getElementById('paginationContainer');
     paginationContainer.innerHTML = ''; // 清空分页容器
 
-    // 检查是否是搜索结果
-    const isSearching = data !== allLiveData && data === filteredLiveData;
-    
-    // 搜索模式使用本地数据长度，非搜索模式使用服务器端总数
-    const totalItems = isSearching ? data.length : (window.liveDataTotalCount || 0);
+    // 使用服务器端总数
+    const totalItems = window.liveDataTotalCount || 0;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     
     if (totalPages <= 1) return;
@@ -1209,20 +1198,37 @@ document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => {
     setupPagination(filteredLiveData);
 });
 
-// 根据关键词过滤数据
+// 根据关键词过滤数据（服务器端搜索）
 function filterLiveSourceData() {
-    const keyword = document.getElementById('liveSourceSearchInput').value.trim().toLowerCase();
-    filteredLiveData = allLiveData.filter(item =>
-        (item.channelName || '').toLowerCase().includes(keyword) ||
-        (item.groupPrefix || '').toLowerCase().includes(keyword) ||
-        (item.groupTitle || '').toLowerCase().includes(keyword) ||
-        (item.streamUrl || '').toLowerCase().includes(keyword) ||
-        (item.tvgId || '').toLowerCase().includes(keyword) ||
-        (item.tvgName || '').toLowerCase().includes(keyword)
-    );
+    const keyword = document.getElementById('liveSourceSearchInput').value.trim();
+    
+    if (!keyword) {
+        // 如果搜索为空，重新加载第一页
+        currentPage = 1;
+        allLiveData = [];
+        filteredLiveData = [];
+        window.liveDataMap = new Map();
+        window.loadedPages = new Set();
+        window.pageDataMap = new Map();
+        const selectedConfig = document.getElementById('live_source_config').value;
+        fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
+        return;
+    }
+    
+    // 执行服务器端搜索
+    const selectedConfig = document.getElementById('live_source_config').value;
+    const searchUrl = `manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}&search=${encodeURIComponent(keyword)}`;
+    
+    // 重置数据结构
+    allLiveData = [];
+    filteredLiveData = [];
     currentPage = 1;
-    displayPage(filteredLiveData, currentPage);
-    setupPagination(filteredLiveData);
+    window.liveDataMap = new Map();
+    window.loadedPages = new Set();
+    window.pageDataMap = new Map();
+    window.currentSearchKeyword = keyword; // 保存当前搜索关键词
+    
+    fetchData(searchUrl, updateLiveSourceModal);
 }
 
 // 更新模态框内容并初始化分页
@@ -1286,6 +1292,8 @@ function onLiveSourceConfigChange() {
     window.loadedPages = new Set();
     window.pageDataMap = new Map();
     window.clientModifiedTags = new Set();
+    window.currentSearchKeyword = ''; // 清除搜索关键词
+    document.getElementById('liveSourceSearchInput').value = ''; // 清空搜索框
     // 获取第一页数据
     fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
 }

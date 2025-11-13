@@ -431,14 +431,33 @@ try {
                 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
                 $perPage = isset($_GET['per_page']) ? max(1, min(1000, intval($_GET['per_page']))) : 100;
                 $offset = ($page - 1) * $perPage;
+                
+                // 获取搜索关键词
+                $searchKeyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+                $searchCondition = '';
+                $searchParams = [$liveSourceConfig];
+                
+                if (!empty($searchKeyword)) {
+                    $searchCondition = " AND (
+                        c.channelName LIKE ? OR 
+                        c.groupPrefix LIKE ? OR 
+                        c.groupTitle LIKE ? OR 
+                        c.streamUrl LIKE ? OR 
+                        c.tvgId LIKE ? OR 
+                        c.tvgName LIKE ?
+                    )";
+                    $searchPattern = '%' . $searchKeyword . '%';
+                    $searchParams = array_merge($searchParams, array_fill(0, 6, $searchPattern));
+                }
 
                 // 获取总数
-                $countStmt = $db->prepare("SELECT COUNT(*) FROM channels WHERE config = ?");
-                $countStmt->execute([$liveSourceConfig]);
+                $countSql = "SELECT COUNT(*) FROM channels c WHERE c.config = ?" . $searchCondition;
+                $countStmt = $db->prepare($countSql);
+                $countStmt->execute($searchParams);
                 $totalCount = $countStmt->fetchColumn();
 
                 // 读取频道数据（分页），并合并测速信息
-                $stmt = $db->prepare("
+                $dataSql = "
                     SELECT 
                         c.*, 
                         REPLACE(ci.resolution, 'x', '<br>x<br>') AS resolution,
@@ -448,10 +467,11 @@ try {
                         END AS speed
                     FROM channels c
                     LEFT JOIN channels_info ci ON c.streamUrl = ci.streamUrl
-                    WHERE c.config = ?
+                    WHERE c.config = ?" . $searchCondition . "
                     LIMIT ? OFFSET ?
-                ");
-                $stmt->execute([$liveSourceConfig, $perPage, $offset]);
+                ";
+                $stmt = $db->prepare($dataSql);
+                $stmt->execute(array_merge($searchParams, [$perPage, $offset]));
                 $channelsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 $dbResponse = [
