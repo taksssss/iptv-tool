@@ -171,9 +171,12 @@ input[type="submit"]:hover,
 }
 
 button[id="deleteUnusedIcons"], button[id="uploadAllIcons"], 
-button[id="showAllIcons"] {
+button[id="showAllIcons"], button[id="liveSourceSearchButton"] {
     display: flex;
     height: 36px;
+    width: 60px;
+    justify-content: center;
+    align-items: center;
 }
 
 .button-container button[name="logoutbtn"] {

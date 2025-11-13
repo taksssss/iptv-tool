@@ -187,7 +187,7 @@ try {
             'get_epg_by_channel', 'get_icon', 'get_channel_bind_epg', 'get_channel_match', 'get_gen_list',
             'get_live_data', 'parse_source_info', 'download_source_data', 'delete_unused_icons', 
             'delete_source_config', 'delete_unused_live_data', 'get_version_log', 'get_readme_content', 
-            'get_access_log', 'get_access_stats', 'clear_access_log', 'get_ip_list', 'test_redis'
+            'get_access_log', 'get_access_stats', 'clear_access_log', 'filter_access_log_by_ip', 'get_ip_list', 'test_redis'
         ];
         $action = key(array_intersect_key($_GET, array_flip($action_map))) ?: '';
 
@@ -427,8 +427,37 @@ try {
                     $configOptionsHtml .= "<option value=\"$label\" $selected>$display</option>\n";
                 }
 
-                // 读取频道数据，并合并测速信息
-                $stmt = $db->prepare("
+                // 获取分页参数
+                $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+                $perPage = isset($_GET['per_page']) ? max(1, min(1000, intval($_GET['per_page']))) : 100;
+                $offset = ($page - 1) * $perPage;
+                
+                // 获取搜索关键词
+                $searchKeyword = isset($_GET['search']) ? trim($_GET['search']) : '';
+                $searchCondition = '';
+                $searchParams = [$liveSourceConfig];
+                
+                if (!empty($searchKeyword)) {
+                    $searchCondition = " AND (
+                        c.channelName LIKE ? OR 
+                        c.groupPrefix LIKE ? OR 
+                        c.groupTitle LIKE ? OR 
+                        c.streamUrl LIKE ? OR 
+                        c.tvgId LIKE ? OR 
+                        c.tvgName LIKE ?
+                    )";
+                    $searchPattern = '%' . $searchKeyword . '%';
+                    $searchParams = array_merge($searchParams, array_fill(0, 6, $searchPattern));
+                }
+
+                // 获取总数
+                $countSql = "SELECT COUNT(*) FROM channels c WHERE c.config = ?" . $searchCondition;
+                $countStmt = $db->prepare($countSql);
+                $countStmt->execute($searchParams);
+                $totalCount = $countStmt->fetchColumn();
+
+                // 读取频道数据（分页），并合并测速信息
+                $dataSql = "
                     SELECT 
                         c.*, 
                         REPLACE(ci.resolution, 'x', '<br>x<br>') AS resolution,
@@ -438,9 +467,11 @@ try {
                         END AS speed
                     FROM channels c
                     LEFT JOIN channels_info ci ON c.streamUrl = ci.streamUrl
-                    WHERE c.config = ?
-                ");
-                $stmt->execute([$liveSourceConfig]);
+                    WHERE c.config = ?" . $searchCondition . "
+                    LIMIT ? OFFSET ?
+                ";
+                $stmt = $db->prepare($dataSql);
+                $stmt->execute(array_merge($searchParams, [$perPage, $offset]));
                 $channelsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 $dbResponse = [
@@ -448,6 +479,9 @@ try {
                     'template_content' => $templateContent,
                     'channels' => $channelsData,
                     'config_options_html' => $configOptionsHtml,
+                    'total_count' => $totalCount,
+                    'page' => $page,
+                    'per_page' => $perPage,
                 ];
                 break;
 
@@ -608,27 +642,94 @@ try {
                 break;
 
             case 'get_access_log':
-                $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+                $limit = isset($_GET['limit']) ? min(1000, max(1, (int)$_GET['limit'])) : 100;
+                $beforeId = isset($_GET['before_id']) ? (int)$_GET['before_id'] : 0;
+                $afterId = isset($_GET['after_id']) ? (int)$_GET['after_id'] : 0;
             
-                $stmt = $db->prepare("SELECT * FROM access_log WHERE id > ? ORDER BY id ASC");
-                $stmt->execute([$offset]);
+                if ($beforeId > 0) {
+                    // 加载更早的日志（向上滚动）
+                    $stmt = $db->prepare("SELECT * FROM access_log WHERE id < ? ORDER BY id DESC LIMIT ?");
+                    $stmt->execute([$beforeId, $limit]);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $rows = array_reverse($rows); // 反转以保持时间顺序
+                } elseif ($afterId > 0) {
+                    // 加载新日志（轮询）
+                    $stmt = $db->prepare("SELECT * FROM access_log WHERE id > ? ORDER BY id ASC");
+                    $stmt->execute([$afterId]);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } else {
+                    // 初始加载最新的日志
+                    $stmt = $db->prepare("SELECT * FROM access_log ORDER BY id DESC LIMIT ?");
+                    $stmt->execute([$limit]);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $rows = array_reverse($rows); // 反转以保持时间顺序
+                }
             
-                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (!$rows) {
-                    $dbResponse = ['success' => true, 'changed' => false, 'offset' => $offset];
+                    $dbResponse = ['success' => true, 'changed' => false, 'logs' => [], 'has_more' => false];
                     break;
                 }
             
-                $content = '';
-                $lastId = $offset;
+                $logs = [];
+                $minId = PHP_INT_MAX;
+                $maxId = 0;
                 foreach ($rows as $row) {
-                    $content .= "[{$row['access_time']}] [{$row['client_ip']}] "
-                        . ($row['access_denied'] ? "{$row['deny_message']} " : '')
-                        . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}\n";
-                    $lastId = max($lastId, $row['id']);
+                    $logs[] = [
+                        'id' => (int)$row['id'],
+                        'text' => "[{$row['access_time']}] [{$row['client_ip']}] "
+                            . ($row['access_denied'] ? "{$row['deny_message']} " : '')
+                            . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
+                    ];
+                    $minId = min($minId, (int)$row['id']);
+                    $maxId = max($maxId, (int)$row['id']);
+                }
+                
+                // 检查是否还有更早的日志
+                $hasMore = false;
+                if ($minId < PHP_INT_MAX) {
+                    $checkStmt = $db->prepare("SELECT COUNT(*) FROM access_log WHERE id < ?");
+                    $checkStmt->execute([$minId]);
+                    $hasMore = $checkStmt->fetchColumn() > 0;
                 }
             
-                $dbResponse = [ 'success' => true, 'changed' => true, 'content' => $content, 'offset' => $lastId ];
+                $dbResponse = [ 
+                    'success' => true, 
+                    'changed' => count($logs) > 0, 
+                    'logs' => $logs, 
+                    'min_id' => $minId < PHP_INT_MAX ? $minId : 0,
+                    'max_id' => $maxId,
+                    'has_more' => $hasMore
+                ];
+                break;
+
+            case 'filter_access_log_by_ip':
+                $ip = isset($_GET['ip']) ? $_GET['ip'] : '';
+                
+                if (empty($ip)) {
+                    $dbResponse = ['success' => false, 'message' => 'IP地址不能为空'];
+                    break;
+                }
+                
+                $stmt = $db->prepare("SELECT * FROM access_log WHERE client_ip = ? ORDER BY id ASC");
+                $stmt->execute([$ip]);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $logs = [];
+                foreach ($rows as $row) {
+                    $logs[] = [
+                        'id' => (int)$row['id'],
+                        'text' => "[{$row['access_time']}] [{$row['client_ip']}] "
+                            . ($row['access_denied'] ? "{$row['deny_message']} " : '')
+                            . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
+                    ];
+                }
+                
+                $dbResponse = [
+                    'success' => true,
+                    'ip' => $ip,
+                    'logs' => $logs,
+                    'count' => count($logs)
+                ];
                 break;
 
             case 'get_access_stats':
@@ -942,8 +1043,61 @@ try {
             
                 // 保存直播源信息
                 $content = json_decode($_POST['content'], true);
-                generateLiveFiles($content, 'tv', $saveOnly = true); // 重新生成 M3U 和 TXT 文件
-                echo json_encode(['success' => true]);
+                
+                // 检查是否为批量更新模式（仅更新修改的记录）
+                if (isset($_POST['batch_update']) && $_POST['batch_update'] === 'true') {
+                    // 批量更新模式：仅更新传入的记录
+                    $liveSourceConfig = $_POST['live_source_config'];
+                    
+                    try {
+                        $db->beginTransaction();
+                        
+                        foreach ($content as $item) {
+                            // 使用 tag 作为唯一标识符更新记录
+                            if (isset($item['tag'])) {
+                                $stmt = $db->prepare("
+                                    UPDATE channels 
+                                    SET groupPrefix = ?, groupTitle = ?, channelName = ?, chsChannelName = ?,
+                                        streamUrl = ?, iconUrl = ?, tvgId = ?, tvgName = ?, 
+                                        disable = ?, modified = ?
+                                    WHERE tag = ? AND config = ?
+                                ");
+                                $stmt->execute([
+                                    $item['groupPrefix'] ?? '',
+                                    $item['groupTitle'] ?? '',
+                                    $item['channelName'] ?? '',
+                                    $item['chsChannelName'] ?? '',
+                                    $item['streamUrl'] ?? '',
+                                    $item['iconUrl'] ?? '',
+                                    $item['tvgId'] ?? '',
+                                    $item['tvgName'] ?? '',
+                                    $item['disable'] ?? 0,
+                                    $item['modified'] ?? 0,
+                                    $item['tag'],
+                                    $liveSourceConfig
+                                ]);
+                            }
+                        }
+                        
+                        $db->commit();
+                        
+                        // 重新生成 M3U 和 TXT 文件（需要读取所有数据）
+                        $stmt = $db->prepare("SELECT * FROM channels WHERE config = ?");
+                        $stmt->execute([$liveSourceConfig]);
+                        $allChannels = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        generateLiveFiles($allChannels, 'tv', $saveOnly = true);
+                        
+                        echo json_encode(['success' => true]);
+                    } catch (Exception $e) {
+                        $db->rollBack();
+                        http_response_code(500);
+                        echo json_encode(['success' => false, 'message' => '保存失败: ' . $e->getMessage()]);
+                    }
+                } else {
+                    // 原有模式：全量保存（向后兼容）
+                    generateLiveFiles($content, 'tv', $saveOnly = true);
+                    echo json_encode(['success' => true]);
+                }
                 exit;
 
             case 'update_config_field':
