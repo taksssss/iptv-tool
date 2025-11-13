@@ -485,43 +485,136 @@ async function saveAndTestRedisConfig() {
     }
 }
 
-let lastOffset = 0, timer = null;
+let accessLogMinId = 0, accessLogMaxId = 0, accessLogTimer = null, isLoadingOlderLogs = false;
 
 // 显示访问日志
 function showAccessLogModal() {
     const box = document.getElementById("accessLogContent");
     const modal = document.getElementById("accesslogModal");
-
-    const load = () => {
-        fetch(`manage.php?get_access_log=true&offset=${lastOffset}`)
+    
+    // 重置状态
+    accessLogMinId = 0;
+    accessLogMaxId = 0;
+    isLoadingOlderLogs = false;
+    
+    // 初始加载最新100条
+    const loadInitial = () => {
+        fetch('manage.php?get_access_log=true&limit=100')
             .then(r => r.json())
             .then(d => {
                 if (!d.success) return;
-
-                const pre = box.querySelector("pre");
-                if (!pre) {
-                    box.innerHTML = `<pre>${highlightIPs(d.content || "")}</pre><div>持续刷新中...</div>`;
-                    box.scrollTop = box.scrollHeight;
-                } else if (d.changed && d.content) {
-                    const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
-                    pre.innerHTML += highlightIPs(d.content);
-                    if (atBottom) box.scrollTop = box.scrollHeight;
+                
+                let content = '';
+                if (d.logs && d.logs.length > 0) {
+                    d.logs.forEach(log => {
+                        content += highlightIPs(log.text) + '\n';
+                    });
+                    accessLogMinId = d.min_id;
+                    accessLogMaxId = d.max_id;
                 }
-
-                lastOffset = d.offset;
-                if (!timer) timer = setInterval(load, 1000);
+                
+                const hasMoreIndicator = d.has_more ? '<div id="loadMoreLogs" style="text-align:center;padding:10px;cursor:pointer;color:#888;">向上滚动加载更早的日志...</div>' : '';
+                box.innerHTML = hasMoreIndicator + `<pre id="accessLogPre">${content}</pre><div>持续监听新日志中...</div>`;
+                box.scrollTop = box.scrollHeight; // 滚动到底部
+                
+                // 开始轮询新日志
+                if (!accessLogTimer) {
+                    accessLogTimer = setInterval(pollNewLogs, 1000);
+                }
             });
     };
-
+    
+    // 轮询新日志
+    const pollNewLogs = () => {
+        if (accessLogMaxId === 0) return;
+        
+        fetch(`manage.php?get_access_log=true&after_id=${accessLogMaxId}`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success || !d.changed || !d.logs || d.logs.length === 0) return;
+                
+                const pre = document.getElementById('accessLogPre');
+                if (!pre) return;
+                
+                const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 50;
+                
+                let newContent = '';
+                d.logs.forEach(log => {
+                    newContent += highlightIPs(log.text) + '\n';
+                });
+                
+                pre.innerHTML += newContent;
+                accessLogMaxId = d.max_id;
+                
+                // 如果用户在底部，自动滚动
+                if (atBottom) {
+                    box.scrollTop = box.scrollHeight;
+                }
+            });
+    };
+    
+    // 加载更早的日志
+    const loadOlderLogs = () => {
+        if (isLoadingOlderLogs || accessLogMinId === 0) return;
+        
+        const loadMoreDiv = document.getElementById('loadMoreLogs');
+        if (!loadMoreDiv) return;
+        
+        isLoadingOlderLogs = true;
+        loadMoreDiv.textContent = '加载中...';
+        
+        fetch(`manage.php?get_access_log=true&before_id=${accessLogMinId}&limit=100`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success || !d.logs || d.logs.length === 0) {
+                    loadMoreDiv.textContent = '没有更早的日志了';
+                    isLoadingOlderLogs = false;
+                    return;
+                }
+                
+                const pre = document.getElementById('accessLogPre');
+                if (!pre) return;
+                
+                const oldScrollHeight = box.scrollHeight;
+                
+                let olderContent = '';
+                d.logs.forEach(log => {
+                    olderContent += highlightIPs(log.text) + '\n';
+                });
+                
+                pre.innerHTML = olderContent + pre.innerHTML;
+                accessLogMinId = d.min_id;
+                
+                // 保持滚动位置
+                box.scrollTop = box.scrollHeight - oldScrollHeight;
+                
+                if (!d.has_more) {
+                    loadMoreDiv.textContent = '没有更早的日志了';
+                } else {
+                    loadMoreDiv.textContent = '向上滚动加载更早的日志...';
+                }
+                
+                isLoadingOlderLogs = false;
+            });
+    };
+    
+    // 监听滚动事件，接近顶部时加载更早日志
+    box.onscroll = () => {
+        if (box.scrollTop < 100) {
+            loadOlderLogs();
+        }
+    };
+    
     modal.style.zIndex = zIndex++;
     modal.style.display = "block";
-    load();
+    loadInitial();
 
     modal.onmousedown = e => {
         if (e.target === modal || e.target.classList.contains("close")) {
             modal.style.display = "none";
-            clearInterval(timer);
-            timer = null;
+            clearInterval(accessLogTimer);
+            accessLogTimer = null;
+            box.onscroll = null;
         }
     };
 }
@@ -536,8 +629,8 @@ function highlightIPs(text) {
 
 // 访问日志统计
 function showAccessStats() {
-    clearInterval(timer);
-    timer = null;
+    clearInterval(accessLogTimer);
+    accessLogTimer = null;
     const modal = document.getElementById("accessStatsModal");
     modal.style.zIndex = zIndex++;
     modal.style.display = "block";
