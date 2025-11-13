@@ -762,14 +762,32 @@ function queryIpLocation(ip, showModal = false) {
 }
 
 function filterLogByIp(ip) {
-    const logContent = document.getElementById("accessLogContent").innerText || '';
-    const lines = logContent.split('\n').filter(line => line.includes(ip));
-    const filtered = lines.length > 0 ? lines.map(line => line.trimEnd()).join('\n') : `无记录：${ip}`;
-    showMessageModal(`
-        <div id="filteredLog" style="width:1000px; height:504px; overflow:auto; font-family:monospace; white-space:pre;">${filtered.replace(/\n/g, '<br>')}</div>
-    `);
-    const d = document.getElementById("filteredLog");
-    if (d) d.scrollTop = d.scrollHeight;
+    // 从服务器获取该IP的所有日志
+    fetch(`manage.php?filter_access_log_by_ip=true&ip=${encodeURIComponent(ip)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showMessageModal(`查询失败：${data.message || '未知错误'}`);
+                return;
+            }
+            
+            let content = '';
+            if (data.logs && data.logs.length > 0) {
+                content = data.logs.map(log => highlightIPs(log.text)).join('<br>');
+            } else {
+                content = `无记录：${ip}`;
+            }
+            
+            showMessageModal(`
+                <div style="text-align:left; margin-bottom:10px;">IP: ${ip} - 共 ${data.count} 条记录</div>
+                <div id="filteredLog" style="width:1000px; height:504px; overflow:auto; font-family:monospace; white-space:pre;">${content}</div>
+            `);
+            const d = document.getElementById("filteredLog");
+            if (d) d.scrollTop = d.scrollHeight;
+        })
+        .catch(error => {
+            showMessageModal(`查询出错：${error}`);
+        });
 }
 
 function addIp(ip, type) {

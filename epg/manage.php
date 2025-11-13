@@ -187,7 +187,7 @@ try {
             'get_epg_by_channel', 'get_icon', 'get_channel_bind_epg', 'get_channel_match', 'get_gen_list',
             'get_live_data', 'parse_source_info', 'download_source_data', 'delete_unused_icons', 
             'delete_source_config', 'delete_unused_live_data', 'get_version_log', 'get_readme_content', 
-            'get_access_log', 'get_access_stats', 'clear_access_log', 'get_ip_list', 'test_redis'
+            'get_access_log', 'get_access_stats', 'clear_access_log', 'filter_access_log_by_ip', 'get_ip_list', 'test_redis'
         ];
         $action = key(array_intersect_key($_GET, array_flip($action_map))) ?: '';
 
@@ -699,6 +699,36 @@ try {
                     'min_id' => $minId < PHP_INT_MAX ? $minId : 0,
                     'max_id' => $maxId,
                     'has_more' => $hasMore
+                ];
+                break;
+
+            case 'filter_access_log_by_ip':
+                $ip = isset($_GET['ip']) ? $_GET['ip'] : '';
+                
+                if (empty($ip)) {
+                    $dbResponse = ['success' => false, 'message' => 'IP地址不能为空'];
+                    break;
+                }
+                
+                $stmt = $db->prepare("SELECT * FROM access_log WHERE client_ip = ? ORDER BY id ASC");
+                $stmt->execute([$ip]);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $logs = [];
+                foreach ($rows as $row) {
+                    $logs[] = [
+                        'id' => (int)$row['id'],
+                        'text' => "[{$row['access_time']}] [{$row['client_ip']}] "
+                            . ($row['access_denied'] ? "{$row['deny_message']} " : '')
+                            . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
+                    ];
+                }
+                
+                $dbResponse = [
+                    'success' => true,
+                    'ip' => $ip,
+                    'logs' => $logs,
+                    'count' => count($logs)
                 ];
                 break;
 
