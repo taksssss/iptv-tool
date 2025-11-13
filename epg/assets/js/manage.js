@@ -1085,6 +1085,8 @@ function displayPage(data, page) {
                     const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
                     if (dataIndex >= 0) {
                         allLiveData[dataIndex][columns[columnIndex]] = cell.textContent.trim();
+                        // 同时更新modified字段为1，表示该行已被修改
+                        allLiveData[dataIndex]['modified'] = 1;
                     }
                     
                     // 更新Map
@@ -1092,6 +1094,7 @@ function displayPage(data, page) {
                         const mapItem = window.liveDataMap.get(item.tag);
                         if (mapItem) {
                             mapItem[columns[columnIndex]] = cell.textContent.trim();
+                            mapItem['modified'] = 1; // 更新modified字段
                             window.liveDataMap.set(item.tag, mapItem);
                         }
                     }
@@ -1102,6 +1105,7 @@ function displayPage(data, page) {
                         const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
                         if (pageItemIndex >= 0) {
                             pageData[pageItemIndex][columns[columnIndex]] = cell.textContent.trim();
+                            pageData[pageItemIndex]['modified'] = 1; // 更新modified字段
                         }
                     }
                     
@@ -1184,6 +1188,27 @@ function displayPage(data, page) {
                             // 标记为客户端修改
                             if (window.clientModifiedTags) {
                                 window.clientModifiedTags.add(item.tag);
+                            }
+                            
+                            // 更新modified字段为1，表示该行已被修改
+                            allLiveData[dataIndex]['modified'] = 1;
+                            
+                            // 更新Map中的modified字段
+                            if (window.liveDataMap) {
+                                const mapItem = window.liveDataMap.get(item.tag);
+                                if (mapItem) {
+                                    mapItem['modified'] = 1;
+                                    window.liveDataMap.set(item.tag, mapItem);
+                                }
+                            }
+                            
+                            // 更新pageDataMap中的modified字段
+                            if (window.pageDataMap && window.pageDataMap.has(currentPage)) {
+                                const pageData = window.pageDataMap.get(currentPage);
+                                const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
+                                if (pageItemIndex >= 0) {
+                                    pageData[pageItemIndex]['modified'] = 1;
+                                }
                             }
                             
                             const lastCell = cell.closest('tr').lastElementChild;
