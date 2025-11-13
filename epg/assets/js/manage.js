@@ -259,6 +259,7 @@ function showModal(type, popup = true, data = '') {
             window.liveDataMap = new Map();
             window.loadedPages = new Set();
             window.pageDataMap = new Map();
+            window.clientModifiedTags = new Set();
             fetchData(`manage.php?get_live_data=true&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
             break;
         case 'chekspeed':
@@ -943,6 +944,9 @@ function displayPage(data, page) {
             ? (page - 1) * rowsPerPage + index + 1
             : startIndex + index + 1;
         
+        // 检查该项是否在客户端被修改过
+        const isClientModified = window.clientModifiedTags && window.clientModifiedTags.has(item.tag);
+        
         row.innerHTML = `
             <td>${globalIndex}</td>
             ${columns.map((col, columnIndex) => {
@@ -957,6 +961,12 @@ function displayPage(data, page) {
                         : (col === 'modified' && item[col] == 1)
                         ? 'table-cell-modified'
                         : 'table-cell-clickable';
+                }
+                
+                // 如果是modified列，显示客户端修改状态而不是数据库的modified字段
+                if (col === 'modified') {
+                    cellContent = isClientModified ? '是' : '否';
+                    cellClass = isClientModified ? 'table-cell-modified' : 'table-cell-clickable';
                 }
         
                 const editable = ['resolution', 'speed', 'disable', 'modified'].includes(col) ? '' : 'contenteditable="true"';
@@ -973,11 +983,15 @@ function displayPage(data, page) {
             cell.addEventListener('input', () => {
                 // 直接使用item而不是通过索引查找
                 if (item && item.tag) {
+                    // 标记为客户端修改
+                    if (window.clientModifiedTags) {
+                        window.clientModifiedTags.add(item.tag);
+                    }
+                    
                     // 更新allLiveData中的对应项
                     const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
                     if (dataIndex >= 0) {
                         allLiveData[dataIndex][columns[columnIndex]] = cell.textContent.trim();
-                        allLiveData[dataIndex]['modified'] = 1;
                     }
                     
                     // 更新Map
@@ -985,7 +999,6 @@ function displayPage(data, page) {
                         const mapItem = window.liveDataMap.get(item.tag);
                         if (mapItem) {
                             mapItem[columns[columnIndex]] = cell.textContent.trim();
-                            mapItem['modified'] = 1;
                             window.liveDataMap.set(item.tag, mapItem);
                         }
                     }
@@ -996,7 +1009,6 @@ function displayPage(data, page) {
                         const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
                         if (pageItemIndex >= 0) {
                             pageData[pageItemIndex][columns[columnIndex]] = cell.textContent.trim();
-                            pageData[pageItemIndex]['modified'] = 1;
                         }
                     }
                     
@@ -1013,60 +1025,57 @@ function displayPage(data, page) {
                 // 直接使用item而不是通过索引查找
                 if (item && item.tag) {
                     const isDisable = columnIndex === 0;
-                    const field = isDisable ? 'disable' : 'modified';
+                    const isModified = columnIndex === 1;
                     
-                    // 更新allLiveData
-                    const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
-                    if (dataIndex >= 0) {
-                        const newValue = allLiveData[dataIndex][field] == 1 ? 0 : 1;
-                        allLiveData[dataIndex][field] = newValue;
-                        
-                        // 更新Map
-                        if (window.liveDataMap) {
-                            const mapItem = window.liveDataMap.get(item.tag);
-                            if (mapItem) {
-                                mapItem[field] = newValue;
-                                window.liveDataMap.set(item.tag, mapItem);
+                    if (isModified) {
+                        // 修改列：切换客户端修改标记
+                        if (window.clientModifiedTags) {
+                            if (window.clientModifiedTags.has(item.tag)) {
+                                window.clientModifiedTags.delete(item.tag);
+                                cell.textContent = '否';
+                                cell.classList.remove('table-cell-modified');
+                            } else {
+                                window.clientModifiedTags.add(item.tag);
+                                cell.textContent = '是';
+                                cell.classList.add('table-cell-modified');
                             }
                         }
-                        
-                        // 更新pageDataMap
-                        if (window.pageDataMap && window.pageDataMap.has(currentPage)) {
-                            const pageData = window.pageDataMap.get(currentPage);
-                            const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
-                            if (pageItemIndex >= 0) {
-                                pageData[pageItemIndex][field] = newValue;
-                            }
-                        }
-                        
-                        cell.textContent = newValue == 1 ? '是' : '否';
-
-                        if (isDisable) {
-                            cell.classList.toggle('table-cell-disable', newValue == 1);
-                            // 标记修改位
-                            allLiveData[dataIndex]['modified'] = 1;
+                    } else if (isDisable) {
+                        // Disable列：更新数据库字段并标记为客户端修改
+                        const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
+                        if (dataIndex >= 0) {
+                            const newValue = allLiveData[dataIndex]['disable'] == 1 ? 0 : 1;
+                            allLiveData[dataIndex]['disable'] = newValue;
                             
+                            // 更新Map
                             if (window.liveDataMap) {
                                 const mapItem = window.liveDataMap.get(item.tag);
                                 if (mapItem) {
-                                    mapItem['modified'] = 1;
+                                    mapItem['disable'] = newValue;
                                     window.liveDataMap.set(item.tag, mapItem);
                                 }
                             }
                             
+                            // 更新pageDataMap
                             if (window.pageDataMap && window.pageDataMap.has(currentPage)) {
                                 const pageData = window.pageDataMap.get(currentPage);
                                 const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
                                 if (pageItemIndex >= 0) {
-                                    pageData[pageItemIndex]['modified'] = 1;
+                                    pageData[pageItemIndex]['disable'] = newValue;
                                 }
+                            }
+                            
+                            cell.textContent = newValue == 1 ? '是' : '否';
+                            cell.classList.toggle('table-cell-disable', newValue == 1);
+                            
+                            // 标记为客户端修改
+                            if (window.clientModifiedTags) {
+                                window.clientModifiedTags.add(item.tag);
                             }
                             
                             const lastCell = cell.closest('tr').lastElementChild;
                             lastCell.textContent = '是';
                             lastCell.classList.add('table-cell-modified');
-                        } else {
-                            cell.classList.toggle('table-cell-modified', newValue == 1);
                         }
                     }
                 }
@@ -1208,6 +1217,11 @@ function updateLiveSourceModal(data) {
     
     const channels = Array.isArray(data.channels) ? data.channels : [];
     
+    // 初始化客户端编辑跟踪Map（如果还未初始化）
+    if (!window.clientModifiedTags) {
+        window.clientModifiedTags = new Set();
+    }
+    
     // 如果是服务器端分页模式（有 total_count）
     if (data.total_count !== undefined) {
         // 初始化数据结构（如果还未初始化）
@@ -1266,6 +1280,7 @@ function onLiveSourceConfigChange() {
     window.liveDataMap = new Map();
     window.loadedPages = new Set();
     window.pageDataMap = new Map();
+    window.clientModifiedTags = new Set();
     // 获取第一页数据
     fetchData(`manage.php?get_live_data=true&live_source_config=${selectedConfig}&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
 }
@@ -1336,9 +1351,9 @@ function saveLiveSourceInfo() {
     const liveTvgIdEnable = document.getElementById('live_tvg_id_enable').value;
     const liveTvgNameEnable = document.getElementById('live_tvg_name_enable').value;
 
-    // 如果使用服务器端分页，只发送修改过的记录
+    // 如果使用服务器端分页，只发送客户端修改过的记录
     const dataToSend = window.liveDataServerPagination 
-        ? allLiveData.filter(item => item.modified == 1)
+        ? allLiveData.filter(item => window.clientModifiedTags && window.clientModifiedTags.has(item.tag))
         : allLiveData;
     
     // 服务器端分页模式下总是使用批量更新
@@ -1362,38 +1377,12 @@ function saveLiveSourceInfo() {
     .then(data => {
         if (data.success) {
             showMessageModal('保存成功<br>已生成 M3U 及 TXT 文件');
-            // 清除修改标记
-            if (window.liveDataMap) {
-                // 使用Map更新
-                window.liveDataMap.forEach((item, tag) => {
-                    if (item.modified == 1) {
-                        item.modified = 0;
-                        window.liveDataMap.set(tag, item);
-                    }
-                });
-                
-                // 更新pageDataMap中所有页的数据
-                if (window.pageDataMap) {
-                    window.pageDataMap.forEach((pageData, pageNum) => {
-                        pageData.forEach(item => {
-                            if (item.modified == 1) {
-                                item.modified = 0;
-                            }
-                        });
-                    });
-                }
-                
-                // 重建allLiveData数组
-                allLiveData = Array.from(window.liveDataMap.values());
-                filteredLiveData = allLiveData;
-            } else {
-                // 原有模式
-                allLiveData.forEach(item => {
-                    if (item.modified == 1) {
-                        item.modified = 0;
-                    }
-                });
+            
+            // 清除客户端修改标记
+            if (window.clientModifiedTags) {
+                window.clientModifiedTags.clear();
             }
+            
             // 刷新当前页显示
             displayPage(filteredLiveData, currentPage);
         } else {
