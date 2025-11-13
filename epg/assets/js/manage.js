@@ -901,19 +901,29 @@ function updateGenList(genData) {
 
 // 显示指定页码的数据
 function displayPage(data, page) {
-    // 如果需要的数据不在本地缓存中，从服务器加载
-    if (data === filteredLiveData && !isPageDataLoaded(page)) {
-        loadPageDataFromServer(page);
-        return;
-    }
-    
     const tableBody = document.querySelector('#liveSourceTable tbody');
     tableBody.innerHTML = ''; // 清空表格内容
 
-    // 从pageDataMap获取当前页的数据
-    const displayData = window.pageDataMap && window.pageDataMap.get(page) 
-        ? window.pageDataMap.get(page) 
-        : [];
+    let displayData;
+    
+    // 检查是否是搜索结果（filteredLiveData !== allLiveData表示正在搜索）
+    const isSearching = data !== allLiveData && data === filteredLiveData;
+    
+    if (isSearching) {
+        // 搜索模式：使用客户端分页
+        const start = (page - 1) * rowsPerPage;
+        const end = Math.min(start + rowsPerPage, data.length);
+        displayData = data.slice(start, end);
+    } else if (data === filteredLiveData && !isPageDataLoaded(page)) {
+        // 服务器端分页模式：需要从服务器加载数据
+        loadPageDataFromServer(page);
+        return;
+    } else {
+        // 从pageDataMap获取当前页的数据
+        displayData = window.pageDataMap && window.pageDataMap.get(page) 
+            ? window.pageDataMap.get(page) 
+            : [];
+    }
 
     if (displayData.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="12">暂无数据</td></tr>';
@@ -950,10 +960,9 @@ function displayPage(data, page) {
                         : 'table-cell-clickable';
                 }
                 
-                // 如果是modified列，显示客户端修改状态而不是数据库的modified字段
-                if (col === 'modified') {
-                    cellContent = isClientModified ? '是' : '否';
-                    cellClass = isClientModified ? 'table-cell-modified' : 'table-cell-clickable';
+                // 如果是modified列且有客户端修改，添加额外样式提示
+                if (col === 'modified' && isClientModified) {
+                    cellClass += ' table-cell-client-modified';
                 }
         
                 const editable = ['resolution', 'speed', 'disable', 'modified'].includes(col) ? '' : 'contenteditable="true"';
@@ -1015,17 +1024,37 @@ function displayPage(data, page) {
                     const isModified = columnIndex === 1;
                     
                     if (isModified) {
-                        // 修改列：切换客户端修改标记
-                        if (window.clientModifiedTags) {
-                            if (window.clientModifiedTags.has(item.tag)) {
-                                window.clientModifiedTags.delete(item.tag);
-                                cell.textContent = '否';
-                                cell.classList.remove('table-cell-modified');
-                            } else {
-                                window.clientModifiedTags.add(item.tag);
-                                cell.textContent = '是';
-                                cell.classList.add('table-cell-modified');
+                        // 修改列：切换数据库的modified字段，并同步客户端修改标记
+                        const dataIndex = allLiveData.findIndex(d => d.tag === item.tag);
+                        if (dataIndex >= 0) {
+                            const newValue = allLiveData[dataIndex]['modified'] == 1 ? 0 : 1;
+                            allLiveData[dataIndex]['modified'] = newValue;
+                            
+                            // 更新Map
+                            if (window.liveDataMap) {
+                                const mapItem = window.liveDataMap.get(item.tag);
+                                if (mapItem) {
+                                    mapItem['modified'] = newValue;
+                                    window.liveDataMap.set(item.tag, mapItem);
+                                }
                             }
+                            
+                            // 更新pageDataMap
+                            if (window.pageDataMap && window.pageDataMap.has(currentPage)) {
+                                const pageData = window.pageDataMap.get(currentPage);
+                                const pageItemIndex = pageData.findIndex(d => d.tag === item.tag);
+                                if (pageItemIndex >= 0) {
+                                    pageData[pageItemIndex]['modified'] = newValue;
+                                }
+                            }
+                            
+                            // 标记为客户端修改
+                            if (window.clientModifiedTags) {
+                                window.clientModifiedTags.add(item.tag);
+                            }
+                            
+                            cell.textContent = newValue == 1 ? '是' : '否';
+                            cell.classList.toggle('table-cell-modified', newValue == 1);
                         }
                     } else if (isDisable) {
                         // Disable列：更新数据库字段并标记为客户端修改
@@ -1116,8 +1145,11 @@ function setupPagination(data) {
     const paginationContainer = document.getElementById('paginationContainer');
     paginationContainer.innerHTML = ''; // 清空分页容器
 
-    // 使用服务器端总数
-    const totalItems = window.liveDataTotalCount || 0;
+    // 检查是否是搜索结果
+    const isSearching = data !== allLiveData && data === filteredLiveData;
+    
+    // 搜索模式使用本地数据长度，非搜索模式使用服务器端总数
+    const totalItems = isSearching ? data.length : (window.liveDataTotalCount || 0);
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     
     if (totalPages <= 1) return;
