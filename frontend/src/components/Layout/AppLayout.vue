@@ -6,6 +6,7 @@
       </div>
       
       <div class="header-right">
+        <ThemeSwitcher />
         <el-dropdown @command="handleCommand">
           <span class="user-dropdown">
             <el-icon><User /></el-icon>
@@ -25,22 +26,7 @@
     </el-header>
     
     <el-container>
-      <el-aside width="200px" class="app-aside">
-        <el-menu
-          :default-active="activeMenu"
-          router
-          class="app-menu"
-        >
-          <el-menu-item index="/">
-            <el-icon><HomeFilled /></el-icon>
-            <span>仪表盘</span>
-          </el-menu-item>
-          <el-menu-item index="/config">
-            <el-icon><Setting /></el-icon>
-            <span>配置管理</span>
-          </el-menu-item>
-        </el-menu>
-      </el-aside>
+      <AppSidebar />
       
       <el-main class="app-main">
         <router-view v-slot="{ Component }">
@@ -51,29 +37,23 @@
       </el-main>
     </el-container>
     
-    <el-footer height="40px" class="app-footer">
-      <span>
-        <a href="https://github.com/taksssss/iptv-tool" target="_blank">
-          https://github.com/taksssss/iptv-tool
-        </a>
-        | v2024.11.25
-      </span>
+    <el-footer height="40px">
+      <AppFooter />
     </el-footer>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, ArrowDown, SwitchButton, HomeFilled, Setting } from '@element-plus/icons-vue'
+import { User, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import AppSidebar from './AppSidebar.vue'
+import AppFooter from './AppFooter.vue'
+import ThemeSwitcher from './ThemeSwitcher.vue'
 
 const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
-
-const activeMenu = computed(() => route.path)
 
 const handleCommand = async (command) => {
   if (command === 'logout') {
