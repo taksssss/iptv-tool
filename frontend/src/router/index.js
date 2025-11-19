@@ -24,6 +24,26 @@ const routes = [
         name: 'Config',
         component: () => import('@/views/Config/Index.vue')
       },
+      {
+        path: 'config/epg-source',
+        name: 'ConfigEpgSource',
+        component: () => import('@/views/Config/EpgSource.vue')
+      },
+      {
+        path: 'config/channel-mapping',
+        name: 'ConfigChannelMapping',
+        component: () => import('@/views/Config/ChannelMapping.vue')
+      },
+      {
+        path: 'config/scheduler',
+        name: 'ConfigScheduler',
+        component: () => import('@/views/Config/Scheduler.vue')
+      },
+      {
+        path: 'config/advanced',
+        name: 'ConfigAdvanced',
+        component: () => import('@/views/Config/Advanced.vue')
+      },
       // EPG routes
       {
         path: 'epg',
