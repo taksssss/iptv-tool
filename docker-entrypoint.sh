@@ -65,6 +65,8 @@ location ~ \.php$ {
     include fastcgi_params;
     fastcgi_pass 127.0.0.1:9000;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_buffers 16 16k;
+    fastcgi_buffer_size 32k;
     fastcgi_index index.php;
     fastcgi_read_timeout 300s;
     fastcgi_send_timeout 300s;
