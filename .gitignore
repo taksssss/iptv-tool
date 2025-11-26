@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+package.json
+package-lock.json
+
+# Data files (generated/user-specific)
+epg/data/config.json
+epg/data/data.db
+epg/data/iconList.json
+epg/data/customSource.php
