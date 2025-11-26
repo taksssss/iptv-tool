@@ -1,138 +1,229 @@
+/* Login page styles with mobile responsiveness */
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
-    font-family: Tahoma, sans-serif;
+    padding: 16px;
+    font-family: Tahoma, "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
     background-color: #f0f0f0;
+    transition: background-color 0.3s, color 0.3s;
 }
-.container {
+
+.login-container {
     background: white;
-    padding: 30px;
+    padding: 24px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    width: 200px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 280px;
 }
+
+@media (min-width: 640px) {
+    .login-container {
+        max-width: 300px;
+        padding: 30px;
+    }
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
 input[type="password"] {
-    width: calc(100%);
-    flex: 1;
-    padding: 7px;
+    width: 100%;
+    padding: 10px;
     font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box;
+    margin-bottom: 16px;
+    transition: border-color 0.3s, background-color 0.3s;
 }
+
+input[type="password"]:focus {
+    outline: none;
+    border-color: #FF9800;
+    box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+}
+
 input[type="submit"],
 .button-container button {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     background-color: #FF9800;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    box-sizing: border-box;
     font-size: 16px;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    transition: background-color 0.3s;
 }
+
 input[type="submit"]:hover {
     background-color: #e68900;
 }
+
+.button-container {
+    margin-top: 8px;
+}
+
 .button-container button {
     background-color: #2196F3;
-    margin-top: 5px;
+    margin-bottom: 0;
 }
+
 .button-container button:hover {
     background-color: #0b7dda;
 }
-.form-group {
-    display: flex;
-    align-items: center;
+
+.error-msg {
+    color: #dc2626;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 12px;
 }
-.form-group label {
-    width: 48px;
-    margin-right: 10px;
-    margin-bottom: 10px;
+
+.success-msg {
+    color: #16a34a;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 12px;
 }
-.form-group input[type="password"] {
-    flex: 1;
-    padding: 5px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
-    margin-bottom: 10px;
-}
+
+/* Modal styles */
 .modal {
-    display: none; /* 默认隐藏 */
+    display: none;
     position: fixed;
-    z-index: 1;
+    z-index: 100;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
     background-color: rgba(0, 0, 0, 0.4);
-    text-align: center;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
 }
+
 .passwd-modal-content {
     background-color: #fefefe;
-    display: inline-block;
     padding: 20px;
     border: 1px solid #888;
-    max-width: 200px;
-    width: auto;
-    text-align: left;
+    width: 100%;
+    max-width: 280px;
     border-radius: 10px;
     position: relative;
-    top: 50%;
-    transform: translateY(-50%);
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
 }
+
+@media (min-width: 640px) {
+    .passwd-modal-content {
+        max-width: 300px;
+    }
+}
+
 .close {
     color: #aaa;
-    float: right;
+    position: absolute;
+    top: 8px;
+    right: 12px;
     font-size: 28px;
     font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
 }
+
 .close:hover,
 .close:focus {
     color: black;
-    text-decoration: none;
-    cursor: pointer;
-}
-.footer {
-    position: fixed;
-    bottom: 10px;
-    width: 100%;
-    text-align: center;
 }
 
-/* 暗色模式 */
+.form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    width: 48px;
+    margin-right: 10px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+.form-group input[type="password"] {
+    flex: 1;
+    padding: 8px;
+    margin-bottom: 0;
+}
+
+.passwd-modal-content input[type="submit"] {
+    margin-top: 16px;
+}
+
+/* Footer */
+.footer {
+    position: fixed;
+    bottom: 12px;
+    width: 100%;
+    text-align: center;
+    padding: 0 16px;
+}
+
+.footer a {
+    color: #888;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s;
+}
+
+.footer a:hover {
+    color: #666;
+}
+
+/* Dark mode */
 body.dark {
     background-color: #121212;
     color: #e0e0e0;
 }
 
-body.dark .container,
+body.dark .login-container,
 body.dark .passwd-modal-content {
     background-color: #1e1e1e;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-body.dark input[type="password"],
-body.dark .button-container button {
+body.dark input[type="password"] {
     background-color: #333;
     color: #e0e0e0;
-    border: 1px solid #555;
+    border-color: #555;
+}
+
+body.dark input[type="password"]:focus {
+    border-color: #FF9800;
 }
 
 body.dark input[type="submit"] {
     background-color: #ce7c00;
-    color: #e0e0e0;
 }
+
 body.dark input[type="submit"]:hover {
     background-color: #ba7000;
 }
@@ -140,6 +231,7 @@ body.dark input[type="submit"]:hover {
 body.dark .button-container button {
     background-color: #2d78b9;
 }
+
 body.dark .button-container button:hover {
     background-color: #1565c0;
 }
@@ -147,4 +239,12 @@ body.dark .button-container button:hover {
 body.dark .close:hover,
 body.dark .close:focus {
     color: #e0e0e0;
+}
+
+body.dark .footer a {
+    color: #888;
+}
+
+body.dark .footer a:hover {
+    color: #aaa;
 }

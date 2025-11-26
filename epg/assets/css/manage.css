@@ -1,11 +1,20 @@
+/* Base styles - Mobile-first responsive design */
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
+    align-items: flex-start;
+    min-height: 100vh;
     margin: 0;
-    font-family: Tahoma, sans-serif;
+    padding: 16px;
+    padding-bottom: 60px;
+    font-family: Tahoma, "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
     background-color: #f0f0f0;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 body.theme-transition {
@@ -14,25 +23,64 @@ body.theme-transition {
 
 .container {
     background: white;
-    padding: 30px;
+    padding: 16px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
-    width: 1010px;
-    margin: auto;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 1010px;
+    margin: 0 auto;
 }
 
+@media (min-width: 640px) {
+    body {
+        padding: 24px;
+        padding-bottom: 60px;
+    }
+    
+    .container {
+        padding: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding: 30px;
+    }
+}
+
+/* Heading */
+h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    user-select: none;
+}
+
+@media (min-width: 640px) {
+    h2 {
+        font-size: 20px;
+    }
+}
+
+/* Textarea styles */
 textarea {
     width: 100%;
-    padding: 5px;
+    padding: 8px;
     line-height: 1.5;
-    font-size: 15px;
+    font-size: 14px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box;
     resize: vertical;
     font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
-    white-space: pre-wrap; /* 保持空白字符和换行符，同时在内容超出容器宽度时换行 */
-    word-break: break-all; /* 允许单词内断行 */
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@media (min-width: 640px) {
+    textarea {
+        font-size: 15px;
+        padding: 10px;
+    }
 }
 
 .table-container::-webkit-resizer, 
@@ -49,7 +97,13 @@ textarea:disabled {
 }
 
 textarea[id="xml_urls"] {
-    min-height: 122px;
+    min-height: 200px;
+}
+
+@media (min-width: 640px) {
+    textarea[id="xml_urls"] {
+        min-height: 122px;
+    }
 }
 
 textarea[id="channel_mappings"] {
@@ -61,82 +115,153 @@ textarea[id="gen_list_text"] {
 }
 
 textarea[id="sourceUrlTextarea"] {
-    min-height: 102px;
+    min-height: 80px;
 }
 
+@media (min-width: 640px) {
+    textarea[id="sourceUrlTextarea"] {
+        min-height: 102px;
+    }
+}
+
+/* Form row styles */
 .form-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
-.label-days-to-keep {
-    width: 98px;
-}
-
-.custom-margin1 {
-    margin-left: 195px;
-}
-
-.custom-margin2,
-.custom-margin3 {
-    margin-left: 70px;
-}
-
-.form-row select, 
-.modal-content select,
-input[type="time"] {
+.form-row select,
+.form-row input[type="time"] {
     font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
-    font-size: 15px;
+    font-size: 14px;
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box;
-    width: 98px;
     height: 32px;
-    margin-right: 12px;
     text-align: center;
 }
 
-input[type="time"] {
+.form-row select {
+    width: 80px;
+}
+
+.form-row input[type="time"] {
     width: 90px;
-    margin-right: 0px;
 }
 
-.form-row input[id="start_time"] {
-    margin-left: 292px;
+.label-days-to-keep {
+    min-width: 90px;
 }
 
-.form-row input[id="end_time"],
-select[id="interval_hour"]{
-    margin-left: 44px;
+.label-time {
+    margin-left: auto;
 }
 
-.form-row select[id="interval_hour"], select[id="interval_minute"] {
-    width: 70px;
-    margin-right: 0px;
+.interval-select {
+    width: 60px !important;
 }
 
+/* Desktop only and mobile only classes */
+.desktop-only {
+    display: none;
+}
+
+.mobile-only {
+    display: block;
+}
+
+@media (min-width: 640px) {
+    .desktop-only {
+        display: flex;
+    }
+    
+    .mobile-only {
+        display: none !important;
+    }
+}
+
+/* Mobile form layout */
+.mobile-form {
+    margin-bottom: 16px;
+}
+
+.mobile-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.mobile-form-row label {
+    min-width: 60px;
+    font-size: 14px;
+}
+
+.mobile-form-row select,
+.mobile-form-row input[type="time"] {
+    flex: 1;
+    height: 32px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.mobile-form-row select {
+    min-width: 60px;
+    max-width: 80px;
+}
+
+.mobile-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.mobile-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    user-select: none;
+}
+
+/* Blue span clickable links */
 a, .blue-span {
-    color: blue;
+    color: #2563eb;
     cursor: pointer;
     text-decoration: none;
 }
 
 a:hover, .blue-span:hover {
-    color: #0056b3;
+    color: #1d4ed8;
 }
 
+/* Button container */
 .button-container {
-    display: flex;
-    gap: 15px;
-    margin: 0 auto;
-    align-items: center;
-    text-align: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
 }
 
-.button-container a, .button-container button,
-.modal-content button, input[type="submit"] {
+@media (min-width: 640px) {
+    .button-container {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .button-container {
+        display: flex;
+        gap: 15px;
+    }
+}
+
+.button-container a, 
+.button-container button {
     padding: 10px;
     background-color: #2196F3;
     color: white;
@@ -144,77 +269,131 @@ a:hover, .blue-span:hover {
     border-radius: 10px;
     text-align: center;
     cursor: pointer;
-    box-sizing: border-box;
-    align-items: center;
-    width: 100%;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: background-color 0.3s;
 }
 
-.button-container a:hover, .button-container button:hover,
-input[type="submit"]:hover, #accessStatsTable th:hover {
+@media (min-width: 640px) {
+    .button-container a, 
+    .button-container button {
+        font-size: 16px;
+        flex: 1;
+    }
+}
+
+.button-container a:hover, 
+.button-container button:hover {
     background-color: #0b7dda;
 }
 
 input[type="submit"],
-.button-container button[name="logoutbtn"],
-.modal-content button {
+.button-container button[name="logoutbtn"] {
     background-color: #FF9800;
     border-radius: 5px;
 }
 
+input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
 input[type="submit"]:hover,
-.button-container button[name="logoutbtn"]:hover,
-.modal-content button:hover {
+.button-container button[name="logoutbtn"]:hover {
     background-color: #e68900;
 }
 
-button[id="deleteUnusedIcons"], button[id="uploadAllIcons"], 
-button[id="showAllIcons"] {
-    display: flex;
-    height: 36px;
+/* Hidden class */
+.hidden {
+    display: none !important;
 }
 
-.button-container button[name="logoutbtn"] {
-    border-radius: 10px;
-    width: 350px;
-}
-
+/* Text input styles */
 input[type="text"],
 input[type="tel"] {
-    width: calc(100% - 22px);
+    width: 100%;
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    font-size: 14px;
 }
 
 input[type="tel"] {
-    padding: 0px;
+    padding: 5px;
     height: 32px;
-    font-size: 15px;
-    margin-bottom: 0px;
+    margin-bottom: 0;
 }
 
+/* Flex container */
 .flex-container {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 20px;
 }
 
-.flex-item {
-    width: 48%;
+@media (min-width: 640px) {
+    .flex-container {
+        flex-direction: row;
+        justify-content: space-between;
+    }
 }
 
+.flex-item {
+    width: 100%;
+}
+
+.flex-item.full-width,
+.full-width {
+    width: 100%;
+}
+
+/* Footer */
 .footer {
     position: fixed;
-    bottom: 10px;
+    bottom: 8px;
+    left: 0;
     width: 100%;
     text-align: center;
+    padding: 0 16px;
+    user-select: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 16px;
 }
 
+.footer a {
+    color: #888;
+    text-decoration: none;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+@media (min-width: 640px) {
+    .footer a {
+        font-size: 14px;
+    }
+}
+
+.footer a:hover {
+    color: #666;
+}
+
+/* Modal styles */
 .modal {
-    display: none; /* 默认隐藏 */
+    display: none;
     position: fixed;
     left: 0;
     top: 0;
@@ -223,12 +402,13 @@ input[type="tel"] {
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.4);
     text-align: center;
+    z-index: 100;
 }
 
 .modal-content {
     background-color: #fefefe;
     display: inline-block;
-    padding: 20px;
+    padding: 16px;
     border: 1px solid #888;
     text-align: left;
     border-radius: 10px;
@@ -236,36 +416,71 @@ input[type="tel"] {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
     top: 50%;
     transform: translateY(-50%);
-    width: 750px;
+    width: 95%;
+    max-width: 750px;
     height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+    .modal-content {
+        padding: 20px;
+        width: auto;
+        max-width: 750px;
+    }
+}
+
+body.dark .modal-content {
+    background-color: #1e1e1e;
+    border-color: #555;
 }
 
 .version-update-modal-content,
 .help-modal-content {
-    padding-left: 25px;
+    padding-left: 20px;
+}
+
+@media (min-width: 640px) {
+    .version-update-modal-content,
+    .help-modal-content {
+        padding-left: 25px;
+    }
 }
 
 .cron-log-modal-content,
 .more-live-setting-modal-content {
-    width: 500px;
+    max-width: 500px;
 }
 
 .update-log-modal-content, 
 .live-source-modal-content,
 .access-log-modal-content,
 .access-stat-modal-content {
-    width: 1000px;
+    max-width: 1000px;
 }
 
 .message-modal-content {
     min-width: 150px;
     width: auto;
+    max-width: 95%;
     height: auto;
     line-height: 1.6;
 }
 
+@media (min-width: 640px) {
+    .message-modal-content {
+        max-width: none;
+    }
+}
+
 .icon-modal-content {
-    width: 700px;
+    max-width: 700px;
+}
+
+.mysql-config-modal-content,
+.redis-config-modal-content {
+    max-width: 300px;
 }
 
 .close {
@@ -273,20 +488,38 @@ input[type="tel"] {
     float: right;
     font-size: 28px;
     font-weight: bold;
+    cursor: pointer;
 }
 
 .close:hover,
 .close:focus {
     color: black;
-    cursor: pointer;
 }
 
+body.dark .close:hover,
+body.dark .close:focus {
+    color: #e0e0e0;
+}
+
+/* Table container */
 .table-container {
-    height: 460px; /* 固定高度 */
-    overflow-y: scroll; /* 启用垂直滚动条 */
+    height: 460px;
+    overflow-y: auto;
+    overflow-x: auto;
     border: 1px solid #ccc;
     border-radius: 5px;
-    font-size: 15px;
+    font-size: 14px;
+}
+
+@media (max-width: 639px) {
+    .table-container {
+        height: 300px;
+        font-size: 12px;
+    }
+}
+
+body.dark .table-container {
+    border-color: #555;
 }
 
 .table-container[id="channel-table-container"],
@@ -304,25 +537,33 @@ input[type="tel"] {
 
 .table-container[id="live-source-table-container"] {
     height: 340px;
-    min-height: 340px;
+    min-height: 250px;
     margin-bottom: 0px;
     resize: vertical;
+}
+
+@media (max-width: 639px) {
+    .table-container[id="live-source-table-container"] {
+        height: 250px;
+        min-height: 200px;
+    }
 }
 
 .table-container[id="access-stats-table-container"] {
     height: 467px;
 }
 
+/* Table styles */
 #logTable, #channelMatchTable, #channelTable, 
 #iconTable, #channelBindEPGTable, #liveSourceTable {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0 0px; /* 调整行之间的垂直间距 */
-    table-layout: fixed; /* 固定表格布局，防止内容超出 */
+    border-spacing: 0 0px;
+    table-layout: fixed;
 }
 
 #logTable, #liveSourceTable {
-    border-spacing: 0 5px; /* 调整行之间的垂直间距 */
+    border-spacing: 0 5px;
 }
 
 #logTable th, #logTable td,
@@ -333,7 +574,18 @@ input[type="tel"] {
 #liveSourceTable th, #liveSourceTable td {
     border: 1px solid #ccc;
     padding: 5px;
-    word-break: break-all; /* 允许单词内断行 */
+    word-break: break-all;
+}
+
+body.dark #logTable th, body.dark #logTable td,
+body.dark #channelTable th,
+body.dark #iconTable th, body.dark #iconTable td,
+body.dark #channelBindEPGTable th, body.dark #channelBindEPGTable td,
+body.dark #channelMatchTable th, body.dark #channelMatchTable td,
+body.dark #liveSourceTable th {
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+    border-color: #555;
 }
 
 #channelTable th, #channelTable td,
@@ -346,37 +598,44 @@ input[type="tel"] {
 
 #logTable th:nth-child(1), 
 #logTable td:nth-child(1) {
-    width: 10%; /* 第一列宽度 */
+    width: 25%;
     text-align: center;
 }
 
+@media (min-width: 640px) {
+    #logTable th:nth-child(1), 
+    #logTable td:nth-child(1) {
+        width: 10%;
+    }
+}
+
 #logTable th:nth-child(2) {
-    text-align: center; /* 第二列表头居中 */
+    text-align: center;
 }
 
 #channelTable th:nth-child(1),
 #channelTable td:nth-child(1) {
-    width: 30%; /* 第一列宽度 */
+    width: 30%;
 }
 
 #iconTable th:nth-child(1),
 #iconTable td:nth-child(1) {
-    width: 17%; /* 第一列宽度 */
+    width: 17%;
 }
 
 #iconTable th:nth-child(2),
 #iconTable td:nth-child(2) {
-    width: 55%; /* 第二列宽度 */
+    width: 55%;
 }
 
 #iconTable th:nth-child(3),
 #iconTable td:nth-child(3) {
-    width: 13%; /* 第三列宽度 */
+    width: 13%;
 }
 
 #channelMatchTable th:nth-child(4),
 #channelMatchTable td:nth-child(4) {
-    width: 15%; /* 第四列宽度 */
+    width: 15%;
 }
 
 #accessStatsTableWrapper {
@@ -408,97 +667,169 @@ input[type="tel"] {
     z-index: 1;
 }
 
+#accessStatsTable th:hover {
+    background-color: #0b7dda;
+}
+
+body.dark #accessStatsTable th {
+    background-color: #2d78b9;
+}
+
+body.dark #accessStatsTable th:hover {
+    background-color: #1565c0;
+}
+
 #accessStatsTable td:first-child,
 #accessStatsTable th:first-child {
     position: sticky;
 }
 
+/* Row and column flex styles for settings */
 .row {
     display: flex;
-    flex-wrap: nowrap; /* 禁止换行 */
-    gap: 45px;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-bottom: 12px;
+}
+
+@media (min-width: 640px) {
+    .row {
+        flex-wrap: nowrap;
+        gap: 45px;
+    }
 }
 
 .column {
     display: flex;
     align-items: center;
-    flex: 1; /* 每个列占据同等宽度 */
+    flex: 1;
+    min-width: 0;
 }
 
-h2, span, label {
-    user-select: none;
+@media (max-width: 639px) {
+    .column {
+        flex: 0 0 100%;
+    }
 }
 
 .row label {
-    white-space: nowrap; /* 确保label不会换行 */
-    margin-right: 0px;
+    white-space: nowrap;
+    margin-right: 5px;
 }
 
 .row select,
-.row textarea {
-    width: 100%;
+.row textarea,
+.row input[type="tel"] {
+    flex: 1;
     margin-right: 0px;
+    min-width: 60px;
+    height: 32px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+}
+
+body.dark .row select,
+body.dark .row textarea,
+body.dark .row input[type="tel"] {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #555;
 }
 
 .row textarea {
-    height: 32px;
     line-height: 1.3;
-    white-space: nowrap; /* 禁止换行 */
-    scrollbar-width: none; /* 隐藏滚动条 */
+    white-space: nowrap;
+    scrollbar-width: none;
     resize: none;
 }
 
 .limited-row {
-    max-height: 6em;  /* 限制约4行 */
+    max-height: 6em;
     overflow: hidden;
     white-space: pre-wrap;
     word-break: break-all;
     transition: max-height 0.3s ease;
 }
+
 .limited-row.expanded {
     max-height: none !important;
 }
 
-/* 分页控件样式 */
+/* Pagination styles */
+#paginationContainer {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
 #paginationContainer button {
     width: 25px;
     height: 20px;
     margin: 0 2px;
-    padding: 0 0;
+    padding: 0;
     color: #aaaaaa;
-    background-color: #ffffff00;
+    background-color: transparent;
+    border: none;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 14px;
 }
+
 #paginationContainer button.active, 
 #paginationContainer button:hover {
     color: rgb(0, 0, 0);
 }
+
+body.dark #paginationContainer button {
+    color: #aaa;
+}
+
+body.dark #paginationContainer button.active,
+body.dark #paginationContainer button:hover {
+    color: #fff;
+}
+
 #paginationContainer button[disabled] {
     color: #bbb;
     cursor: not-allowed;
 }
 
-/* 自定义滚动条样式 */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
     height: 10px;
     width: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
     background-color: #ddd;
     border-radius: 4px;
-    cursor: default;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background-color: #ccc;
 }
+
 ::-webkit-scrollbar-track,
 ::-webkit-scrollbar-corner {
     background-color: #f5f5f5;
-    cursor: default;
 }
 
+body.dark ::-webkit-scrollbar-thumb {
+    background-color: #555;
+}
+
+body.dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #666;
+}
+
+body.dark ::-webkit-scrollbar-track,
+body.dark ::-webkit-scrollbar-corner {
+    background-color: #2a2a2a;
+}
+
+/* Table cell special states */
 .table-cell-disable {
     font-weight: bold;
     color: red;
@@ -509,6 +840,16 @@ h2, span, label {
     font-weight: bold;
     color: red;
     background-color: #DEFAFF;
+}
+
+body.dark .table-cell-disable {
+    color: #ff7f7f;
+    background-color: #4a4a32;
+}
+
+body.dark .table-cell-modified {
+    color: #ff7f7f;
+    background-color: #3b616b;
 }
 
 .table-cell-clickable {
@@ -522,11 +863,113 @@ h2, span, label {
     background-color: white;
 }
 
+body.dark .sticky-header {
+    background-color: #2c2c2c;
+}
+
+/* Checkbox and input styles */
 input[type="checkbox"] {
     vertical-align: middle;
 }
 
-/* 主题切换按钮 */
+/* Dark mode image filter */
+body.dark img {
+    filter: brightness(0.9);
+}
+
+/* Modal button styles */
+.modal-content button,
+.modal-content input[type="submit"] {
+    padding: 10px;
+    background-color: #FF9800;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    width: 100%;
+}
+
+.modal-content button:hover,
+.modal-content input[type="submit"]:hover {
+    background-color: #e68900;
+}
+
+body.dark .modal-content button,
+body.dark .modal-content input[type="submit"] {
+    background-color: #ce7c00;
+}
+
+body.dark .modal-content button:hover,
+body.dark .modal-content input[type="submit"]:hover {
+    background-color: #ba7000;
+}
+
+/* Modal select and input styles */
+.modal-content select,
+.modal-content input[type="text"],
+.modal-content input[type="time"],
+.modal-content input[type="tel"],
+.modal-content textarea {
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+body.dark .modal-content select,
+body.dark .modal-content input[type="text"],
+body.dark .modal-content input[type="time"],
+body.dark .modal-content input[type="tel"],
+body.dark .modal-content textarea {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #555;
+}
+
+/* Specific modal input styles */
+.modal-content input[type="text"] {
+    width: calc(100% - 12px);
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+/* Live source modal specific styles */
+.input-container label {
+    display: inline-block;
+}
+
+#sourceUrlTextarea {
+    min-height: 80px;
+}
+
+@media (min-width: 640px) {
+    #sourceUrlTextarea {
+        min-height: 102px;
+    }
+}
+
+/* Button container in modals */
+.modal-content .button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.modal-content .button-container button {
+    flex: 1;
+    min-width: 80px;
+}
+
+@media (max-width: 639px) {
+    .modal-content .button-container button {
+        flex: 0 0 calc(50% - 5px);
+    }
+}
+
+/* Theme switcher preserved from original */
 .checkbox {
     opacity: 0;
     position: absolute;
@@ -561,7 +1004,7 @@ input[type="checkbox"] {
     width: 22px;
     height: 22px;
     position: absolute;
-    right: 2px; /* 小球保持在右边 */
+    right: 2px;
     top: 2px;
     border-radius: 50%;
     transition: transform 0.5s ease;
@@ -575,20 +1018,51 @@ input[type="checkbox"] {
     top: 48%;
     left: 75%;
     transform: translateX(-50%) translateY(-50%);
-    z-index: 1; /* 文字位于小球上面 */
+    z-index: 1;
     user-select: none;
     transition: opacity 0.5s ease;
 }
 
+body.dark .checkbox-label i,
+body.dark .checkbox-label .label-text {
+    color: #eee;
+}
 
-/* 暗色模式 */
+body.dark .checkbox-label .ball {
+    background-color: #222;
+}
+
+/* User select none for specific elements */
+h2, span, label {
+    user-select: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 639px) {
+    .modal-content h2 {
+        font-size: 18px;
+    }
+    
+    .modal-content {
+        font-size: 14px;
+    }
+    
+    #liveSourceSearchInput {
+        font-size: 14px;
+    }
+    
+    #rowsPerPageSelect {
+        font-size: 14px;
+    }
+}}
+
+/* Dark mode base styles */
 body.dark {
     background-color: #121212;
     color: #e0e0e0;
 }
-  
-body.dark .container,
-body.dark .modal-content {
+
+body.dark .container {
     background-color: #1e1e1e;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
@@ -600,7 +1074,7 @@ body.dark input[type="time"],
 body.dark input[type="tel"] {
     background-color: #333;
     color: #e0e0e0;
-    border: 1px solid #555;
+    border-color: #555;
 }
 
 body.dark textarea:disabled {
@@ -610,98 +1084,40 @@ body.dark textarea:disabled {
 
 body.dark a,
 body.dark .blue-span {
-    color: #80bfff;
+    color: #60a5fa;
 }
 
 body.dark a:hover,
 body.dark .blue-span:hover {
-    color: #3399ff;
+    color: #3b82f6;
 }
 
 body.dark .button-container a,
-body.dark .button-container button,
-body.dark #accessStatsTable th {
+body.dark .button-container button {
     background-color: #2d78b9;
     color: #e0e0e0;
 }
 
 body.dark .button-container a:hover,
-body.dark .button-container button:hover,
-body.dark #accessStatsTable th:hover {
+body.dark .button-container button:hover {
     background-color: #1565c0;
 }
 
 body.dark input[type="submit"],
-body.dark .button-container button[name="logoutbtn"],
-body.dark .modal-content button {
+body.dark .button-container button[name="logoutbtn"] {
     background-color: #ce7c00;
     color: #e0e0e0;
 }
 
 body.dark input[type="submit"]:hover,
-body.dark .button-container button[name="logoutbtn"]:hover,
-body.dark .modal-content button:hover {
+body.dark .button-container button[name="logoutbtn"]:hover {
     background-color: #ba7000;
 }
 
-body.dark #paginationContainer button {
-    background-color: #1e1e1e;
+body.dark .footer a {
+    color: #888;
+}
+
+body.dark .footer a:hover {
     color: #aaa;
-}
-
-body.dark #paginationContainer button.active,
-body.dark #paginationContainer button:hover {
-    background-color: #333;
-    color: #fff;
-}
-
-body.dark #logTable th, body.dark #logTable td,
-body.dark #channelTable th,
-body.dark #iconTable th, body.dark #iconTable td,
-body.dark #channelBindEPGTable th, body.dark #channelBindEPGTable td,
-body.dark #channelMatchTable th, body.dark #channelMatchTable td,
-body.dark #liveSourceTable th {
-    background-color: #2c2c2c;
-    color: #e0e0e0;
-}
-
-body.dark .close:hover,
-body.dark .close:focus {
-    color: #e0e0e0;
-}
-
-body.dark img{
-    filter: brightness(0.9);
-}
-
-body.dark ::-webkit-scrollbar-thumb {
-    background-color: #555;
-}
-
-body.dark ::-webkit-scrollbar-thumb:hover {
-    background-color: #666;
-}
-
-body.dark ::-webkit-scrollbar-track,
-body.dark ::-webkit-scrollbar-corner {
-    background-color: #2a2a2a;
-}
-
-body.dark .table-cell-disable {
-    color: #ff7f7f;
-    background-color: #4a4a32;
-}
-
-body.dark .table-cell-modified {
-    color: #ff7f7f;
-    background-color: #3b616b;
-}
-
-body.dark .checkbox-label i,
-body.dark .checkbox-label .label-text {
-    color: #eee;
-}
-
-body.dark .checkbox-label .ball {
-    background-color: #222;
 }

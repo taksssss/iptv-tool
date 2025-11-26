@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
     <title>登录</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="assets/css/login.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
 </head>
-<body>
+<body class="flex flex-col justify-center items-center min-h-screen m-0 font-sans bg-gray-100 dark:bg-dark dark:text-gray-200">
 <script>
 (function() {
     const savedTheme = localStorage.getItem('theme');
@@ -18,25 +19,25 @@
     }
 })();
 </script>
-<div class="container">
+<div class="login-container">
     <h2>登录</h2>
     <form method="POST">
-        <label for="password">管理密码：</label><br><br>
-        <input type="password" id="password" name="password"><br><br>
+        <label for="password">管理密码：</label>
+        <input type="password" id="password" name="password">
         <input type="hidden" name="login" value="1">
         <input type="submit" value="登录">
     </form>
     <div class="button-container">
         <button type="button" onclick="showChangePasswordForm()">更改密码</button>
     </div>
-    <?php if (!empty($error)) echo "<p style='color:red;'>$error</p>"; ?>
-    <?php echo $passwordChangedMessage; ?>
-    <?php echo $passwordChangeErrorMessage; ?>
+    <?php if (!empty($error)) echo "<p class='error-msg'>$error</p>"; ?>
+    <?php echo isset($passwordChanged) ? "<p class='success-msg'>密码已更改</p>" : ''; ?>
+    <?php echo isset($passwordChangeError) ? "<p class='error-msg'>$passwordChangeError</p>" : ''; ?>
 </div>
 
 <!-- 底部显示 -->
 <div class="footer">
-    <a href="https://github.com/taksssss/iptv-tool" target="_blank" style="color: #888; text-decoration: none;">
+    <a href="https://github.com/taksssss/iptv-tool" target="_blank">
         https://github.com/taksssss/iptv-tool
     </a>
 </div>
@@ -62,7 +63,7 @@
                 <input type="password" id="confirm_password" name="confirm_password">
             </div>
             <input type="hidden" name="change_password" value="1">
-            <input type="submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>" style="margin-top: 15px;">
+            <input type="submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>">
         </form>
     </div>
 </div>
@@ -72,7 +73,7 @@
         var changePasswordModal = document.getElementById("changePasswordModal");
         var changePasswordSpan = document.getElementsByClassName("close")[0];
 
-        changePasswordModal.style.display = "block";
+        changePasswordModal.style.display = "flex";
 
         changePasswordSpan.onclick = function() {
             changePasswordModal.style.display = "none";
@@ -89,7 +90,7 @@
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
         if (newPassword !== confirmPassword) {
-            alert('两次输入密码不一致！'); // 提示也尽量简洁
+            alert('两次输入密码不一致！');
             return false;
         }
         return true;

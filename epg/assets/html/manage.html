@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <title>IPTV工具箱</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="assets/css/manage.css">
     <link rel="stylesheet" type="text/css" href="assets/css/fa-5-15-4-all-min.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
@@ -20,7 +21,7 @@
 })();
 </script>
 <div class="container">
-    <div>
+    <div class="theme-toggle-wrapper">
         <input type="checkbox" class="checkbox" id="themeSwitcher">
         <label for="themeSwitcher" class="checkbox-label">
             <i id="themeIcon"></i>
@@ -37,19 +38,14 @@
     <form method="POST" id="settingsForm">
         <label for="xml_urls">【EPG地址】</label>
         <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">（频道指定源）</span>
-        <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">【禁用/启用】</span>
+        <span class="blue-span mobile-only" id="mobileComment_epg" onclick="commentAll('xml_urls')">【禁用/启用】</span>
         <br><br>
         <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
         <br><br>
 
-        <div class="form-row">
+        <!-- 桌面端布局 -->
+        <div class="form-row desktop-only">
             <label for="days_to_keep" class="label-days-to-keep">数据保存天数</label>
-            <label for="start_time" class="label-time custom-margin1">【定时任务】： 开始时间</label>
-            <label for="end_time" class="label-time2 custom-margin2">结束时间</label>
-            <label for="interval_time" class="label-time3 custom-margin3">间隔周期</label>
-        </div>
-
-        <div class="form-row">
             <select id="days_to_keep" name="days_to_keep" required>
                 <?php for ($i = 1; $i <= 30; $i++): ?>
                     <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
@@ -57,28 +53,76 @@
                     </option>
                 <?php endfor; ?>
             </select>
+            <label for="start_time" class="label-time">【定时任务】：开始时间</label>
             <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
+            <label for="end_time" class="label-time">结束时间</label>
             <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
-
-            <!-- Interval Time Controls -->
-            <select id="interval_hour" name="interval_hour" required>
+            <label for="interval_time" class="label-time">间隔周期</label>
+            <select id="interval_hour" name="interval_hour" required class="interval-select">
                 <?php for ($h = 0; $h < 24; $h++): ?>
                     <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
                         <?= $h; ?>
                     </option>
                 <?php endfor; ?>
-            </select> 小时
-            <select id="interval_minute" name="interval_minute" required>
+            </select>
+            <span>小时</span>
+            <select id="interval_minute" name="interval_minute" required class="interval-select">
                 <?php for ($m = 0; $m < 60; $m++): ?>
                     <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
                         <?= $m; ?>
                     </option>
                 <?php endfor; ?>
-            </select> 分钟
-        </div><br>
+            </select>
+            <span>分钟</span>
+        </div>
+
+        <!-- 移动端布局 -->
+        <div class="mobile-form mobile-only">
+            <div class="mobile-form-row">
+                <label for="days_to_keep_mobile">保存天数</label>
+                <select id="days_to_keep_mobile" name="days_to_keep" required>
+                    <?php for ($i = 1; $i <= 30; $i++): ?>
+                        <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
+                            <?= $i; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            <div class="mobile-section-title">【定时任务】</div>
+            <div class="mobile-form-grid">
+                <div class="mobile-form-row">
+                    <label for="start_time_mobile">开始</label>
+                    <input type="time" id="start_time_mobile" name="start_time" value="<?= $Config['start_time']; ?>" required>
+                </div>
+                <div class="mobile-form-row">
+                    <label for="end_time_mobile">结束</label>
+                    <input type="time" id="end_time_mobile" name="end_time" value="<?= $Config['end_time']; ?>" required>
+                </div>
+            </div>
+            <div class="mobile-form-row">
+                <label>间隔</label>
+                <select id="interval_hour_mobile" name="interval_hour" required>
+                    <?php for ($h = 0; $h < 24; $h++): ?>
+                        <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
+                            <?= $h; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+                <span>时</span>
+                <select id="interval_minute_mobile" name="interval_minute" required>
+                    <?php for ($m = 0; $m < 60; $m++): ?>
+                        <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
+                            <?= $m; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+                <span>分</span>
+            </div>
+        </div>
+        <br>
 
         <div class="flex-container">
-            <div class="flex-item" style="width: 100%;">
+            <div class="flex-item full-width">
                 <label>【频道别名】</label>
                 <span class="blue-span" id="channelInfi" onclick="showModal('channel')">（频道管理）</span>
                 <span class="blue-span" id="iconInfo" onclick="showModal('icon')">（台标管理）</span>
@@ -101,7 +145,7 @@
             <button type="button" onclick="showModal('cron')">定时日志</button>
             <button type="button" onclick="showModal('update')">更新日志</button>
             <button type="button" id="accessLogBtn" onclick="showAccessLogModal()" 
-                style="display: <?= (@$Config['debug_mode'] == 1) ? 'inline-block' : 'none'; ?>;">
+                class="<?= (@$Config['debug_mode'] == 1) ? '' : 'hidden'; ?>">
                 访问日志
             </button>
             <button type="button" onclick="showModal('moresetting')">更多设置</button>
@@ -111,17 +155,17 @@
 </div>
 
 <!-- 底部显示 -->
-<div class="footer" style="user-select: none;">
-    <a href="https://github.com/taksssss/iptv-tool" target="_blank" style="color: #888; text-decoration: none;">
+<div class="footer">
+    <a href="https://github.com/taksssss/iptv-tool" target="_blank">
         https://github.com/taksssss/iptv-tool
     </a>
-    <a onclick="showVersionLog();" style="color: #888;">
+    <a onclick="showVersionLog();">
         <span id="version">v2024.11.25</span>
         版本日志
     </a>
-    <a onclick="showHelpModal();" style="color: #888;">使用说明</a>
-    <a onclick="showDonationImage()" style="color: #888;">☕打赏</a>
-    <a href="https://gitee.com/taksssss/iptv-tool/blob/main/DONATIONS.md" target="_blank" style="color: #888; text-decoration: none;">
+    <a onclick="showHelpModal();">使用说明</a>
+    <a onclick="showDonationImage()">☕打赏</a>
+    <a href="https://gitee.com/taksssss/iptv-tool/blob/main/DONATIONS.md" target="_blank">
         🌹鸣谢列表
     </a>
 </div>
