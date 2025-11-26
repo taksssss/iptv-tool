@@ -6,85 +6,81 @@
     <link rel="stylesheet" type="text/css" href="assets/css/login.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
 </head>
-<body class="flex flex-col justify-center items-center min-h-screen m-0 font-sans bg-gray-100 dark:bg-dark dark:text-gray-200">
+<body>
 <script>
 (function() {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.body.classList.add(savedTheme);
-    } else {
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.body.classList.add('dark');
-        }
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
     }
 })();
 </script>
-<div class="login-container">
-    <h2>登录</h2>
-    <form method="POST">
-        <label for="password">管理密码：</label>
-        <input type="password" id="password" name="password">
-        <input type="hidden" name="login" value="1">
-        <input type="submit" value="登录">
-    </form>
-    <div class="button-container">
-        <button type="button" onclick="showChangePasswordForm()">更改密码</button>
-    </div>
-    <?php if (!empty($error)) echo "<p class='error-msg'>$error</p>"; ?>
-    <?php echo isset($passwordChanged) ? "<p class='success-msg'>密码已更改</p>" : ''; ?>
-    <?php echo isset($passwordChangeError) ? "<p class='error-msg'>$passwordChangeError</p>" : ''; ?>
-</div>
 
-<!-- 底部显示 -->
-<div class="footer">
-    <a href="https://github.com/taksssss/iptv-tool" target="_blank">
-        https://github.com/taksssss/iptv-tool
-    </a>
-</div>
-
-<!-- 修改密码模态框 -->
-<div id="changePasswordModal" class="modal">
-    <div class="passwd-modal-content">
-        <span class="close">&times;</span>
-        <h2><?= !empty($forceChangePassword) ? "设置登录密码" : "更改登录密码" ?></h2>
-        <form method="POST" onsubmit="return checkPasswordMatch()">
-            <?php if (empty($forceChangePassword)): ?>
-            <div class="form-group">
-                <label for="old_password">原密码</label>
-                <input type="password" id="old_password" name="old_password">
-            </div>
-            <?php endif; ?>
-            <div class="form-group">
-                <label for="new_password">新密码</label>
-                <input type="password" id="new_password" name="new_password">
-            </div>
-            <div class="form-group">
-                <label for="confirm_password">确　认</label>
-                <input type="password" id="confirm_password" name="confirm_password">
-            </div>
-            <input type="hidden" name="change_password" value="1">
-            <input type="submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>">
+<div id="app">
+    <!-- 登录容器 -->
+    <div class="login-container">
+        <h2>登录</h2>
+        <form method="POST">
+            <label for="password">管理密码：</label>
+            <input type="password" id="password" name="password">
+            <input type="hidden" name="login" value="1">
+            <button type="submit" class="btn-primary">登录</button>
         </form>
+        <button type="button" class="btn-secondary" onclick="showChangePasswordForm()">更改密码</button>
+        <?php if (!empty($error)) echo "<p class='error-msg'>$error</p>"; ?>
+        <?php echo $passwordChangedMessage; ?>
+        <?php echo $passwordChangeErrorMessage; ?>
+    </div>
+
+    <!-- 底部链接 -->
+    <div class="footer">
+        <a href="https://github.com/taksssss/iptv-tool" target="_blank">
+            https://github.com/taksssss/iptv-tool
+        </a>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <h2><?= !empty($forceChangePassword) ? "设置登录密码" : "更改登录密码" ?></h2>
+            <form method="POST" onsubmit="return checkPasswordMatch()">
+                <?php if (empty($forceChangePassword)): ?>
+                <div class="form-group">
+                    <label>原密码</label>
+                    <input type="password" name="old_password">
+                </div>
+                <?php endif; ?>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="new_password" name="new_password">
+                </div>
+                <div class="form-group">
+                    <label>确认</label>
+                    <input type="password" id="confirm_password" name="confirm_password">
+                </div>
+                <input type="hidden" name="change_password" value="1">
+                <button type="submit" class="btn-primary">
+                    <?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
     function showChangePasswordForm() {
-        var changePasswordModal = document.getElementById("changePasswordModal");
-        var changePasswordSpan = document.getElementsByClassName("close")[0];
-
-        changePasswordModal.style.display = "flex";
-
-        changePasswordSpan.onclick = function() {
-            changePasswordModal.style.display = "none";
-        }
-
-        window.onclick = function(event) {
-            if (event.target == changePasswordModal) {
-                changePasswordModal.style.display = "none";
-            }
-        }
+        document.getElementById('changePasswordModal').classList.add('show');
     }
+
+    function closeModal() {
+        document.getElementById('changePasswordModal').classList.remove('show');
+    }
+
+    // Close modal on background click
+    document.getElementById('changePasswordModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
 
     function checkPasswordMatch() {
         const newPassword = document.getElementById('new_password').value;

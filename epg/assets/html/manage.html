@@ -11,164 +11,217 @@
 <script>
 (function() {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.body.classList.add(savedTheme);
-    } else {
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.body.classList.add('dark');
-        }
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
     }
 })();
 </script>
-<div class="container">
-    <div class="theme-toggle-wrapper">
-        <input type="checkbox" class="checkbox" id="themeSwitcher">
-        <label for="themeSwitcher" class="checkbox-label">
-            <i id="themeIcon"></i>
-            <span class="label-text"></span>
-            <span class="ball"></span>
-        </label>
-        <script>
-            const theme = localStorage.getItem('theme');
-            document.getElementById("themeIcon").className = `fas ${theme === 'dark' ? 'fa-moon' : theme === 'light' ? 'fa-sun' : 'fa-adjust'}`;
-            document.querySelector('.label-text').textContent = (theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto');
-        </script>
-    </div>
-    <h2>管理配置</h2>
-    <form method="POST" id="settingsForm">
-        <label for="xml_urls">【EPG地址】</label>
-        <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">（频道指定源）</span>
-        <span class="blue-span mobile-only" id="mobileComment_epg" onclick="commentAll('xml_urls')">【禁用/启用】</span>
-        <br><br>
-        <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
-        <br><br>
 
-        <!-- 桌面端布局 -->
-        <div class="form-row desktop-only">
-            <label for="days_to_keep" class="label-days-to-keep">数据保存天数</label>
-            <select id="days_to_keep" name="days_to_keep" required>
-                <?php for ($i = 1; $i <= 30; $i++): ?>
-                    <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
-                        <?= $i; ?>
-                    </option>
-                <?php endfor; ?>
-            </select>
-            <label for="start_time" class="label-time">【定时任务】：开始时间</label>
-            <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
-            <label for="end_time" class="label-time">结束时间</label>
-            <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
-            <label for="interval_time" class="label-time">间隔周期</label>
-            <select id="interval_hour" name="interval_hour" required class="interval-select">
-                <?php for ($h = 0; $h < 24; $h++): ?>
-                    <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
-                        <?= $h; ?>
-                    </option>
-                <?php endfor; ?>
-            </select>
-            <span>小时</span>
-            <select id="interval_minute" name="interval_minute" required class="interval-select">
-                <?php for ($m = 0; $m < 60; $m++): ?>
-                    <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
-                        <?= $m; ?>
-                    </option>
-                <?php endfor; ?>
-            </select>
-            <span>分钟</span>
-        </div>
-
-        <!-- 移动端布局 -->
-        <div class="mobile-form mobile-only">
-            <div class="mobile-form-row">
-                <label for="days_to_keep_mobile">保存天数</label>
-                <select id="days_to_keep_mobile" name="days_to_keep" required>
-                    <?php for ($i = 1; $i <= 30; $i++): ?>
-                        <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
-                            <?= $i; ?>
-                        </option>
-                    <?php endfor; ?>
-                </select>
-            </div>
-            <div class="mobile-section-title">【定时任务】</div>
-            <div class="mobile-form-grid">
-                <div class="mobile-form-row">
-                    <label for="start_time_mobile">开始</label>
-                    <input type="time" id="start_time_mobile" name="start_time" value="<?= $Config['start_time']; ?>" required>
-                </div>
-                <div class="mobile-form-row">
-                    <label for="end_time_mobile">结束</label>
-                    <input type="time" id="end_time_mobile" name="end_time" value="<?= $Config['end_time']; ?>" required>
-                </div>
-            </div>
-            <div class="mobile-form-row">
-                <label>间隔</label>
-                <select id="interval_hour_mobile" name="interval_hour" required>
-                    <?php for ($h = 0; $h < 24; $h++): ?>
-                        <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
-                            <?= $h; ?>
-                        </option>
-                    <?php endfor; ?>
-                </select>
-                <span>时</span>
-                <select id="interval_minute_mobile" name="interval_minute" required>
-                    <?php for ($m = 0; $m < 60; $m++): ?>
-                        <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
-                            <?= $m; ?>
-                        </option>
-                    <?php endfor; ?>
-                </select>
-                <span>分</span>
-            </div>
-        </div>
-        <br>
-
-        <div class="flex-container">
-            <div class="flex-item full-width">
-                <label>【频道别名】</label>
-                <span class="blue-span" id="channelInfi" onclick="showModal('channel')">（频道管理）</span>
-                <span class="blue-span" id="iconInfo" onclick="showModal('icon')">（台标管理）</span>
-                <span class="blue-span" id="liveInfo" onclick="showModal('live')">（直播源管理）</span>
-                <br><br>
-                <textarea id="channel_mappings" name="channel_mappings"><?php 
-                    echo implode("\n", array_map(function($search, $replace) {
-                        return $search . ' => ' . $replace;
-                    }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
-                ?></textarea>
-            </div>
-        </div>
-        <br>
-        <input id="update_config" name="update_config" type="submit" value="保存配置">
-        <br><br>
-        <div class="button-container">
-            <button type="button" onclick="showExecResult('update.php')">更新数据</button>
-            <a href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
-            <a href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
-            <button type="button" onclick="showModal('cron')">定时日志</button>
-            <button type="button" onclick="showModal('update')">更新日志</button>
-            <button type="button" id="accessLogBtn" onclick="showAccessLogModal()" 
-                class="<?= (@$Config['debug_mode'] == 1) ? '' : 'hidden'; ?>">
-                访问日志
+<div id="app" class="app-container">
+    <div class="main-container">
+        <!-- 主题切换 -->
+        <div class="theme-toggle">
+            <button onclick="toggleTheme()" class="theme-btn">
+                <i id="themeIcon" class="fas fa-adjust"></i>
+                <span id="themeText">Auto</span>
             </button>
-            <button type="button" onclick="showModal('moresetting')">更多设置</button>
-            <button type="button" name="logoutbtn" onclick="logout()">退出</button>
         </div>
-    </form>
+        
+        <h2>管理配置</h2>
+        
+        <form method="POST" id="settingsForm">
+            <!-- EPG地址 -->
+            <div class="form-label-row">
+                <label>【EPG地址】</label>
+                <span class="blue-span" onclick="showModal('channelbindepg')">（频道指定源）</span>
+                <span class="blue-span mobile-only" onclick="commentAll('xml_urls')">【禁用/启用】</span>
+            </div>
+            <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
+
+            <!-- 桌面端设置行 -->
+            <div class="settings-row desktop-only">
+                <label>数据保存天数</label>
+                <select id="days_to_keep" name="days_to_keep" required>
+                    <?php for ($i = 1; $i <= 30; $i++): ?>
+                        <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>><?= $i; ?></option>
+                    <?php endfor; ?>
+                </select>
+                
+                <span class="spacer"></span>
+                
+                <span>【定时任务】：开始时间</span>
+                <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
+                
+                <span>结束时间</span>
+                <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
+                
+                <span>间隔周期</span>
+                <select id="interval_hour" name="interval_hour" required class="small-select">
+                    <?php for ($h = 0; $h < 24; $h++): ?>
+                        <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>><?= $h; ?></option>
+                    <?php endfor; ?>
+                </select>
+                <span>小时</span>
+                <select id="interval_minute" name="interval_minute" required class="small-select">
+                    <?php for ($m = 0; $m < 60; $m++): ?>
+                        <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>><?= $m; ?></option>
+                    <?php endfor; ?>
+                </select>
+                <span>分钟</span>
+            </div>
+
+            <!-- 移动端设置行 -->
+            <div class="mobile-settings mobile-only">
+                <div class="mobile-row">
+                    <label>保存天数</label>
+                    <select id="days_to_keep_mobile" name="days_to_keep" required>
+                        <?php for ($i = 1; $i <= 30; $i++): ?>
+                            <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>><?= $i; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="mobile-section-title">【定时任务】</div>
+                <div class="mobile-grid">
+                    <div class="mobile-row">
+                        <label>开始</label>
+                        <input type="time" id="start_time_mobile" name="start_time" value="<?= $Config['start_time']; ?>" required>
+                    </div>
+                    <div class="mobile-row">
+                        <label>结束</label>
+                        <input type="time" id="end_time_mobile" name="end_time" value="<?= $Config['end_time']; ?>" required>
+                    </div>
+                </div>
+                <div class="mobile-row">
+                    <label>间隔</label>
+                    <select id="interval_hour_mobile" name="interval_hour" required>
+                        <?php for ($h = 0; $h < 24; $h++): ?>
+                            <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>><?= $h; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <span>时</span>
+                    <select id="interval_minute_mobile" name="interval_minute" required>
+                        <?php for ($m = 0; $m < 60; $m++): ?>
+                            <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>><?= $m; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <span>分</span>
+                </div>
+            </div>
+
+            <!-- 频道别名 -->
+            <div class="form-label-row">
+                <label>【频道别名】</label>
+                <span class="blue-span" onclick="showModal('channel')">（频道管理）</span>
+                <span class="blue-span" onclick="showModal('icon')">（台标管理）</span>
+                <span class="blue-span" onclick="showModal('live')">（直播源管理）</span>
+            </div>
+            <textarea id="channel_mappings" name="channel_mappings"><?php 
+                echo implode("\n", array_map(function($search, $replace) {
+                    return $search . ' => ' . $replace;
+                }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
+            ?></textarea>
+
+            <!-- 保存按钮 -->
+            <button type="submit" id="update_config" name="update_config" value="1" class="btn-save">
+                保存配置
+            </button>
+
+            <!-- 操作按钮组 -->
+            <div class="action-buttons">
+                <button type="button" onclick="showExecResult('update.php')">更新数据</button>
+                <a href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
+                <a href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
+                <button type="button" onclick="showModal('cron')">定时日志</button>
+                <button type="button" onclick="showModal('update')">更新日志</button>
+                <button type="button" id="accessLogBtn" onclick="showAccessLogModal()" 
+                    class="<?= (@$Config['debug_mode'] == 1) ? '' : 'hidden'; ?>">
+                    访问日志
+                </button>
+                <button type="button" onclick="showModal('moresetting')">更多设置</button>
+                <button type="button" class="btn-logout" onclick="logout()">退出</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- 底部显示 -->
-<div class="footer">
+<div class="app-footer">
     <a href="https://github.com/taksssss/iptv-tool" target="_blank">
         https://github.com/taksssss/iptv-tool
     </a>
-    <a onclick="showVersionLog();">
-        <span id="version">v2024.11.25</span>
-        版本日志
+    <a onclick="showVersionLog();" class="clickable">
+        <span id="version">v2024.11.25</span> 版本日志
     </a>
-    <a onclick="showHelpModal();">使用说明</a>
-    <a onclick="showDonationImage()">☕打赏</a>
+    <a onclick="showHelpModal();" class="clickable">使用说明</a>
+    <a onclick="showDonationImage()" class="clickable">☕打赏</a>
     <a href="https://gitee.com/taksssss/iptv-tool/blob/main/DONATIONS.md" target="_blank">
         🌹鸣谢列表
     </a>
 </div>
+
+<script>
+// Theme toggle function
+function toggleTheme() {
+    const themes = ['auto', 'light', 'dark'];
+    let current = localStorage.getItem('theme') || 'auto';
+    let nextIndex = (themes.indexOf(current) + 1) % themes.length;
+    let next = themes[nextIndex];
+    
+    localStorage.setItem('theme', next);
+    updateThemeUI(next);
+    
+    if (next === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else if (next === 'light') {
+        document.documentElement.classList.remove('dark');
+    } else {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+}
+
+function updateThemeUI(theme) {
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    if (theme === 'dark') {
+        icon.className = 'fas fa-moon';
+        text.textContent = 'Dark';
+    } else if (theme === 'light') {
+        icon.className = 'fas fa-sun';
+        text.textContent = 'Light';
+    } else {
+        icon.className = 'fas fa-adjust';
+        text.textContent = 'Auto';
+    }
+}
+
+// Initialize theme UI
+updateThemeUI(localStorage.getItem('theme') || 'auto');
+
+// Sync mobile and desktop form inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const syncPairs = [
+        ['days_to_keep', 'days_to_keep_mobile'],
+        ['start_time', 'start_time_mobile'],
+        ['end_time', 'end_time_mobile'],
+        ['interval_hour', 'interval_hour_mobile'],
+        ['interval_minute', 'interval_minute_mobile']
+    ];
+    
+    syncPairs.forEach(([desktopId, mobileId]) => {
+        const desktop = document.getElementById(desktopId);
+        const mobile = document.getElementById(mobileId);
+        
+        if (desktop && mobile) {
+            desktop.addEventListener('change', () => { mobile.value = desktop.value; });
+            mobile.addEventListener('change', () => { desktop.value = mobile.value; });
+        }
+    });
+});
+</script>
 
 <!-- 消息模态框 -->
 <div id="messageModal" class="modal">
@@ -884,6 +937,7 @@
         <button id="saveConfig" type="button" onclick="setGenListAndUpdateConfig();">保存配置</button>
     </div>
 </div>
+
 <script src="assets/js/manage.js"></script>
 </body>
 </html>

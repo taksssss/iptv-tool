@@ -166,28 +166,6 @@ if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
     document.getElementById('sourceUrlTextarea').style.minHeight = '300px';
 }
 
-// 同步移动端和桌面端的表单输入
-document.addEventListener('DOMContentLoaded', function() {
-    // Sync pairs: [desktop_id, mobile_id]
-    const syncPairs = [
-        ['days_to_keep', 'days_to_keep_mobile'],
-        ['start_time', 'start_time_mobile'],
-        ['end_time', 'end_time_mobile'],
-        ['interval_hour', 'interval_hour_mobile'],
-        ['interval_minute', 'interval_minute_mobile']
-    ];
-    
-    syncPairs.forEach(([desktopId, mobileId]) => {
-        const desktop = document.getElementById(desktopId);
-        const mobile = document.getElementById(mobileId);
-        
-        if (desktop && mobile) {
-            desktop.addEventListener('change', () => { mobile.value = desktop.value; });
-            mobile.addEventListener('change', () => { desktop.value = mobile.value; });
-        }
-    });
-});
-
 // 格式化时间
 function formatTime(seconds) {
     const formattedHours = String(Math.floor(seconds / 3600));
@@ -2300,12 +2278,7 @@ function updateNotifyInfo() {
 
 // 监听 debug_mode 更变
 function debugMode(selectElem) {
-    const btn = document.getElementById("accessLogBtn");
-    if (selectElem.value === "1") {
-        btn.classList.remove("hidden");
-    } else {
-        btn.classList.add("hidden");
-    }
+    document.getElementById("accessLogBtn").style.display = selectElem.value === "1" ? "inline-block" : "none";
 }
 
 // 页面加载时恢复大小
