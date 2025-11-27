@@ -1,0 +1,11 @@
+# Data files created during runtime
+epg/data/*.json
+epg/data/*.db
+epg/data/*.php
+epg/data/live/
+epg/data/icon/
+
+# Temporary files
+*.log
+*.tmp
+/tmp/
