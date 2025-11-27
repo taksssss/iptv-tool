@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IPTV工具箱</title>
     <link rel="stylesheet" type="text/css" href="assets/css/manage.css">
     <link rel="stylesheet" type="text/css" href="assets/css/fa-5-15-4-all-min.css">
@@ -43,39 +45,48 @@
         <br><br>
 
         <div class="form-row">
-            <label for="days_to_keep" class="label-days-to-keep">数据保存天数</label>
-            <label for="start_time" class="label-time custom-margin1">【定时任务】： 开始时间</label>
-            <label for="end_time" class="label-time2 custom-margin2">结束时间</label>
-            <label for="interval_time" class="label-time3 custom-margin3">间隔周期</label>
+            <div class="form-group-inline">
+                <label for="days_to_keep" class="label-days-to-keep">数据保存天数</label>
+                <select id="days_to_keep" name="days_to_keep" required>
+                    <?php for ($i = 1; $i <= 30; $i++): ?>
+                        <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
+                            <?= $i; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+            </div>
         </div>
 
         <div class="form-row">
-            <select id="days_to_keep" name="days_to_keep" required>
-                <?php for ($i = 1; $i <= 30; $i++): ?>
-                    <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
-                        <?= $i; ?>
-                    </option>
-                <?php endfor; ?>
-            </select>
-            <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
-            <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
-
-            <!-- Interval Time Controls -->
-            <select id="interval_hour" name="interval_hour" required>
-                <?php for ($h = 0; $h < 24; $h++): ?>
-                    <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
-                        <?= $h; ?>
-                    </option>
-                <?php endfor; ?>
-            </select> 小时
-            <select id="interval_minute" name="interval_minute" required>
-                <?php for ($m = 0; $m < 60; $m++): ?>
-                    <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
-                        <?= $m; ?>
-                    </option>
-                <?php endfor; ?>
-            </select> 分钟
-        </div><br>
+            <label class="form-section-label">【定时任务】</label>
+            <div class="form-group-inline">
+                <label for="start_time" class="label-time">开始时间</label>
+                <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
+            </div>
+            <div class="form-group-inline">
+                <label for="end_time" class="label-time2">结束时间</label>
+                <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
+            </div>
+            <div class="form-group-inline">
+                <label for="interval_time" class="label-time3">间隔周期</label>
+                <span class="interval-inputs">
+                    <select id="interval_hour" name="interval_hour" required>
+                        <?php for ($h = 0; $h < 24; $h++): ?>
+                            <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
+                                <?= $h; ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select><span class="unit">小时</span>
+                    <select id="interval_minute" name="interval_minute" required>
+                        <?php for ($m = 0; $m < 60; $m++): ?>
+                            <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
+                                <?= $m; ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select><span class="unit">分钟</span>
+                </span>
+            </div>
+        </div>
 
         <div class="flex-container">
             <div class="flex-item" style="width: 100%;">
