@@ -1,237 +1,116 @@
-/* ==========================================
-   Mobile-First Responsive Login Styles
-   ========================================== */
-
-/* Base reset and box-sizing */
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
-/* Mobile-first base styles */
 body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    height: 100vh;
     margin: 0;
-    padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: Tahoma, sans-serif;
     background-color: #f0f0f0;
-    -webkit-tap-highlight-color: transparent;
 }
-
-/* Container - Mobile first */
 .container {
     background: white;
-    padding: 24px 20px;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    width: 100%;
-    max-width: 320px;
+    padding: 30px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    width: 200px;
 }
-
-/* Input fields - Touch friendly */
 input[type="password"] {
-    width: 100%;
-    padding: 14px 12px;
-    font-size: 16px; /* Prevents iOS zoom */
+    width: calc(100%);
+    flex: 1;
+    padding: 7px;
+    font-size: 16px;
     border: 1px solid #ccc;
-    border-radius: 8px;
+    border-radius: 5px;
     box-sizing: border-box;
-    -webkit-appearance: none;
-    appearance: none;
 }
-
-input[type="password"]:focus {
-    outline: none;
-    border-color: #2196F3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
-}
-
-/* Buttons - Touch friendly (min 44px) */
 input[type="submit"],
 .button-container button {
     width: 100%;
-    min-height: 48px;
-    padding: 14px 16px;
+    padding: 8px;
     background-color: #FF9800;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: pointer;
     box-sizing: border-box;
     font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    -webkit-appearance: none;
-    appearance: none;
-    touch-action: manipulation;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    font-weight: bold;
+    margin-bottom: 5px;
 }
-
-input[type="submit"]:hover,
-input[type="submit"]:active {
+input[type="submit"]:hover {
     background-color: #e68900;
 }
-
-input[type="submit"]:active {
-    transform: scale(0.98);
-}
-
 .button-container button {
     background-color: #2196F3;
-    margin-top: 8px;
-    margin-bottom: 0;
+    margin-top: 5px;
 }
-
-.button-container button:hover,
-.button-container button:active {
+.button-container button:hover {
     background-color: #0b7dda;
 }
-
-/* Form groups */
 .form-group {
     display: flex;
-    flex-direction: column;
-    margin-bottom: 16px;
+    align-items: center;
 }
-
 .form-group label {
-    margin-bottom: 8px;
-    font-weight: 500;
-    font-size: 14px;
+    width: 48px;
+    margin-right: 10px;
+    margin-bottom: 10px;
 }
-
 .form-group input[type="password"] {
-    padding: 14px 12px;
+    flex: 1;
+    padding: 5px;
     font-size: 16px;
     border: 1px solid #ccc;
-    border-radius: 8px;
+    border-radius: 5px;
     box-sizing: border-box;
+    margin-bottom: 10px;
 }
-
-/* Modal styles */
 .modal {
-    display: none;
+    display: none; /* 默认隐藏 */
     position: fixed;
-    z-index: 1000;
+    z-index: 1;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 16px;
-    -webkit-overflow-scrolling: touch;
+    background-color: rgba(0, 0, 0, 0.4);
+    text-align: center;
 }
-
 .passwd-modal-content {
     background-color: #fefefe;
-    margin: auto;
-    padding: 24px 20px;
-    border: none;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 320px;
+    display: inline-block;
+    padding: 20px;
+    border: 1px solid #888;
+    max-width: 200px;
+    width: auto;
     text-align: left;
+    border-radius: 10px;
     position: relative;
     top: 50%;
     transform: translateY(-50%);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
 }
-
-/* Close button - Touch friendly */
 .close {
     color: #aaa;
-    position: absolute;
-    right: 16px;
-    top: 12px;
+    float: right;
     font-size: 28px;
     font-weight: bold;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
 }
-
 .close:hover,
 .close:focus {
-    color: #333;
-    background-color: rgba(0, 0, 0, 0.05);
+    color: black;
     text-decoration: none;
+    cursor: pointer;
 }
-
-/* Footer */
 .footer {
     position: fixed;
-    bottom: 0;
-    left: 0;
+    bottom: 10px;
     width: 100%;
-    padding: 12px 16px;
     text-align: center;
-    background-color: rgba(240, 240, 240, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
-.footer a {
-    font-size: 12px;
-}
-
-/* ==========================================
-   Tablet and Desktop Styles (min-width: 768px)
-   ========================================== */
-@media screen and (min-width: 768px) {
-    body {
-        padding: 24px;
-    }
-
-    .container {
-        padding: 32px;
-        max-width: 360px;
-    }
-
-    .form-group {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .form-group label {
-        width: 56px;
-        margin-right: 12px;
-        margin-bottom: 16px;
-    }
-
-    .form-group input[type="password"] {
-        flex: 1;
-        margin-bottom: 16px;
-    }
-
-    .passwd-modal-content {
-        max-width: 360px;
-        padding: 28px;
-    }
-
-    .footer {
-        background-color: transparent;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        padding: 16px;
-    }
-
-    .footer a {
-        font-size: 14px;
-    }
-}
-
-/* ==========================================
-   Dark Mode Styles
-   ========================================== */
+/* 暗色模式 */
 body.dark {
     background-color: #121212;
     color: #e0e0e0;
@@ -240,56 +119,90 @@ body.dark {
 body.dark .container,
 body.dark .passwd-modal-content {
     background-color: #1e1e1e;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-body.dark input[type="password"] {
-    background-color: #2a2a2a;
+body.dark input[type="password"],
+body.dark .button-container button {
+    background-color: #333;
     color: #e0e0e0;
-    border-color: #444;
-}
-
-body.dark input[type="password"]:focus {
-    border-color: #4da3ff;
-    box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2);
+    border: 1px solid #555;
 }
 
 body.dark input[type="submit"] {
     background-color: #ce7c00;
-    color: #fff;
+    color: #e0e0e0;
 }
-
-body.dark input[type="submit"]:hover,
-body.dark input[type="submit"]:active {
+body.dark input[type="submit"]:hover {
     background-color: #ba7000;
 }
 
 body.dark .button-container button {
     background-color: #2d78b9;
-    color: #fff;
 }
-
-body.dark .button-container button:hover,
-body.dark .button-container button:active {
+body.dark .button-container button:hover {
     background-color: #1565c0;
-}
-
-body.dark .close {
-    color: #888;
 }
 
 body.dark .close:hover,
 body.dark .close:focus {
     color: #e0e0e0;
-    background-color: rgba(255, 255, 255, 0.1);
 }
+/* ==========================================
+   Mobile Responsive Styles
+   ========================================== */
 
-body.dark .footer {
-    background-color: rgba(18, 18, 18, 0.9);
-}
+@media screen and (max-width: 768px) {
+    body {
+        padding: 16px;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
 
-@media screen and (min-width: 768px) {
-    body.dark .footer {
-        background-color: transparent;
+    .container {
+        width: calc(100% - 32px);
+        max-width: 300px;
+        padding: 24px 20px;
+    }
+
+    input[type="password"] {
+        padding: 12px 10px;
+        min-height: 44px;
+    }
+
+    input[type="submit"],
+    .button-container button {
+        min-height: 44px;
+        padding: 12px 16px;
+        touch-action: manipulation;
+    }
+
+    .form-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-group label {
+        width: auto;
+        margin-right: 0;
+        margin-bottom: 6px;
+    }
+
+    .form-group input[type="password"] {
+        margin-bottom: 12px;
+    }
+
+    .passwd-modal-content {
+        width: calc(100% - 32px);
+        max-width: 280px;
+        margin: 0 16px;
+    }
+
+    .close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
