@@ -148,3 +148,61 @@ body.dark .close:hover,
 body.dark .close:focus {
     color: #e0e0e0;
 }
+/* ==========================================
+   Mobile Responsive Styles
+   ========================================== */
+
+@media screen and (max-width: 768px) {
+    body {
+        padding: 16px;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    .container {
+        width: calc(100% - 32px);
+        max-width: 300px;
+        padding: 24px 20px;
+    }
+
+    input[type="password"] {
+        padding: 12px 10px;
+        min-height: 44px;
+    }
+
+    input[type="submit"],
+    .button-container button {
+        min-height: 44px;
+        padding: 12px 16px;
+        touch-action: manipulation;
+    }
+
+    .form-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-group label {
+        width: auto;
+        margin-right: 0;
+        margin-bottom: 6px;
+    }
+
+    .form-group input[type="password"] {
+        margin-bottom: 12px;
+    }
+
+    .passwd-modal-content {
+        width: calc(100% - 32px);
+        max-width: 280px;
+        margin: 0 16px;
+    }
+
+    .close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
