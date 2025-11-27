@@ -783,17 +783,6 @@ body.dark .checkbox-label .ball {
         -webkit-overflow-scrolling: touch;
     }
 
-    .table-container[id="live-source-table-container"],
-    .table-container[id="channel-table-container"],
-    .table-container[id="icon-table-container"],
-    .table-container[id="channel-bind-epg-table-container"],
-    .table-container[id="channel-match-table-container"],
-    .table-container[id="access-stats-table-container"],
-    .table-container[id="log-table-container"] {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
     .table-container table {
         min-width: 600px;
     }
@@ -862,9 +851,5 @@ body.dark .checkbox-label .ball {
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .footer {
-        text-align: center;
     }
 }
