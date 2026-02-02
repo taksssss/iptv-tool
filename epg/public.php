@@ -591,14 +591,17 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                 case 'extku9opt':
                     $jsonOpts = safeJsonDecode($value);
                     if ($jsonOpts !== null) {
+                        $parts = [];
                         foreach ($jsonOpts as $k => $v) {
                             $k = str_replace(['#', "\n", "\r"], '', $k);
                             $v = str_replace(['#', "\n", "\r"], '', $v);
                             if (!empty($k)) {
-                                $extvlcoptPattern .= "#EXTKU9OPT:" . $k . "=" . $v . "#";
+                                $parts[] = "$k=$v";
                             }
                         }
-                        $extvlcoptPattern = rtrim($extvlcoptPattern, "#") . "\n";
+                        if (!empty($parts)) {
+                            $extvlcoptPattern .= "#EXTKU9OPT:" . implode('#', $parts) . "\n";
+                        }
                     }
                     break;
 
