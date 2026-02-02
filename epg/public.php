@@ -579,7 +579,6 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     $jsonOpts = safeJsonDecode($value);
                     if ($jsonOpts !== null) {
                         foreach ($jsonOpts as $k => $v) {
-                            // 验证和清理键值
                             $k = str_replace(["\n", "\r"], '', $k);
                             $v = str_replace(["\n", "\r"], '', $v);
                             if (!empty($k)) {
@@ -593,14 +592,12 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     $jsonOpts = safeJsonDecode($value);
                     if ($jsonOpts !== null) {
                         foreach ($jsonOpts as $k => $v) {
-                            // 验证和清理键值，防止注入
                             $k = str_replace(['#', "\n", "\r"], '', $k);
                             $v = str_replace(['#', "\n", "\r"], '', $v);
                             if (!empty($k)) {
                                 $extvlcoptPattern .= "#EXTKU9OPT:" . $k . "=" . $v . "#";
                             }
                         }
-                        // Remove trailing #
                         $extvlcoptPattern = rtrim($extvlcoptPattern, "#") . "\n";
                     }
                     break;
@@ -832,7 +829,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
         } else {
             // 处理 TXT 格式的直播源
             $groupTitle = '';
-            $groupKu9Opt = ''; // 存储当前分组的 EXTKU9OPT
+            $groupKu9Opt = '';
             foreach ($urlContentLines as $urlContentLine) {
                 $urlContentLine = trim($urlContentLine);
                 $parts = explode(',', $urlContentLine, 2);
@@ -842,18 +839,14 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                         $groupTitle = trim($parts[0]); // 更新 group-title
                         
                         // 解析 #genre# 后面的 EXTKU9OPT 参数
-                        // 格式: 分组名,#genre#,DE=xxx#SC=xxx
                         $genreParts = explode(',', $parts[1]);
                         $groupKu9Opt = '';
                         if (count($genreParts) > 1) {
-                            // 查找 DE=xxx#SC=xxx 部分（跳过 HEADERS= 和其他已知格式）
                             for ($i = 1; $i < count($genreParts); $i++) {
                                 $genrePart = trim($genreParts[$i]);
-                                // 检查是否包含 = 字符且不是已知的特殊参数
                                 if (strpos($genrePart, '=') !== false 
                                     && stripos($genrePart, 'HEADERS=') === false
                                     && stripos($genrePart, 'PROXY=') === false) {
-                                    // 转换为 #EXTKU9OPT:KEY=VALUE# 格式
                                     $groupKu9Opt = "#EXTKU9OPT:" . $genrePart . "\n";
                                     break;
                                 }
@@ -865,7 +858,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     $originalChannelName = trim($parts[0]);
                     $rawUrl = trim($parts[1]);
 
-                    // 解析 URL 中的 #EXTKU9OPT 参数（优先级高于分组级别）
+                    // 解析 URL 中的 #EXTKU9OPT 参数
                     $urlKu9Opt = parseExtKu9OptFromUrl($rawUrl, $groupTitle);
 
                     // 将 extInfOpt 转成 key="value" 字符串
@@ -885,7 +878,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                             continue; // 跳过空的URL部分
                         }
                         
-                        // 添加 EXTKU9OPT（URL级别优先，否则使用分组级别）
+                        // 添加 EXTKU9OPT
                         $streamUrl = '';
                         if (!empty($urlKu9Opt)) {
                             $streamUrl .= $urlKu9Opt;
@@ -995,7 +988,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
     return $errorLog ?: true;
 }
 
-// 安全的 JSON 解码辅助函数
+// JSON 解码辅助函数
 function safeJsonDecode($jsonStr) {
     if (empty($jsonStr)) {
         return null;
@@ -1017,39 +1010,31 @@ function extractExtInfOpt(&$streamUrl) {
 }
 
 // 解析 URL 中的 #EXTKU9OPT 参数
-// 格式: URL #EXTKU9OPT={"DE":"xxx", "SC":"xxx"}
-// 或者: URL #EXTKU9OPT={"分组1":{"DE":"xxx"}, "分组2":{"DE":"yyy"}}
 function parseExtKU9OptFromUrl(&$url, $groupTitle = '') {
     $ku9opt = '';
     
-    // 检查是否包含 #EXTKU9OPT=（使用非贪婪匹配）
     if (preg_match('/\s+#EXTKU9OPT=(\{.+?\})\s*$/i', $url, $matches)) {
         $jsonStr = $matches[1];
         $url = trim(preg_replace('/\s+#EXTKU9OPT=\{.+?\}\s*$/i', '', $url));
         
         $jsonOpts = safeJsonDecode($jsonStr);
         if ($jsonOpts !== null) {
-            // 检查是否是分组特定的配置
             $optsToUse = [];
             foreach ($jsonOpts as $k => $v) {
                 if (is_array($v)) {
-                    // 分组特定配置，匹配分组名
                     if ($k === $groupTitle) {
                         $optsToUse = $v;
                         break;
                     }
                 } else {
-                    // 通用配置
                     $optsToUse = $jsonOpts;
                     break;
                 }
             }
             
-            // 转换为 #EXTKU9OPT:KEY=VALUE# 格式
             if (!empty($optsToUse)) {
                 $parts = [];
                 foreach ($optsToUse as $k => $v) {
-                    // 验证和清理键值，防止注入
                     $k = str_replace(['#', "\n", "\r"], '', $k);
                     $v = str_replace(['#', "\n", "\r"], '', $v);
                     if (!empty($k)) {
@@ -1066,12 +1051,11 @@ function parseExtKU9OptFromUrl(&$url, $groupTitle = '') {
     return $ku9opt;
 }
 
-// 从 streamUrl 中提取 #EXTKU9OPT 内容为键值对
+// 从 streamUrl 中提取 #EXTKU9OPT 内容
 function extractExtKU9OptFromStreamUrl($streamUrl) {
     $opts = [];
     if (preg_match('/^#EXTKU9OPT:(.+)$/m', $streamUrl, $m)) {
         $optStr = trim($m[1]);
-        // 解析 KEY=VALUE#KEY2=VALUE2 格式
         $pairs = explode('#', $optStr);
         foreach ($pairs as $pair) {
             $parts = explode('=', $pair, 2);
@@ -1158,16 +1142,13 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                 $currentGroupSources = [];
                 $groupKu9Opt = '';
                 
-                // 处理分组的其他参数
                 for ($i = 1; $i < count($groupParts); $i++) {
                     $part = $groupParts[$i];
-                    // 检查是否是 #EXTKU9OPT 参数（使用非贪婪匹配）
                     if (preg_match('/^#EXTKU9OPT=(\{.+?\})$/i', $part, $matches)) {
                         $jsonOpts = safeJsonDecode($matches[1]);
                         if ($jsonOpts !== null) {
                             $optParts = [];
                             foreach ($jsonOpts as $k => $v) {
-                                // 验证和清理键值
                                 $k = str_replace(['#', "\n", "\r"], '', $k);
                                 $v = str_replace(['#', "\n", "\r"], '', $v);
                                 if (!empty($k)) {
@@ -1179,7 +1160,6 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                             }
                         }
                     } else {
-                        // 否则作为源
                         $currentGroupSources[] = $part;
                     }
                 }
@@ -1233,7 +1213,6 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     // 更新信息
                     $extInfOptStr = extractExtInfOpt($streamUrl);
                     
-                    // 如果模板组有 EXTKU9OPT 且 streamUrl 中没有，则添加
                     if (!empty($groupInfo['ku9opt']) && strpos($streamUrl, '#EXTKU9OPT:') === false) {
                         $streamUrl = $groupInfo['ku9opt'] . $streamUrl;
                     }
@@ -1242,7 +1221,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     $rowGroupTitle = $templateGroupTitle === 'default' ? $groupPrefix . $groupTitle : $templateGroupTitle;
                     $row['groupTitle'] = $rowGroupTitle;
                     $row['rawGroupTitle'] = $groupTitle;
-                    $row['streamUrl'] = $streamUrl; // 更新 streamUrl
+                    $row['streamUrl'] = $streamUrl;
 
                     // 过滤重复数据
                     $channelKey = $rowGroupTitle . $channelName . $streamUrl;
@@ -1309,7 +1288,6 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                             // 更新信息
                             $extInfOptStr = extractExtInfOpt($streamUrl);
                             
-                            // 如果模板组有 EXTKU9OPT 且 streamUrl 中没有，则添加
                             if (!empty($groupInfo['ku9opt']) && strpos($streamUrl, '#EXTKU9OPT:') === false) {
                                 $streamUrl = $groupInfo['ku9opt'] . $streamUrl;
                             }
@@ -1320,7 +1298,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                             $row['rawGroupTitle'] = $groupTitle;
                             $finalChannelName = strpos($groupChannelName, 'regex:') === 0 ? $channelName : $groupChannelName; // 正则表达式使用原频道名
                             $row['channelName'] = $finalChannelName;
-                            $row['streamUrl'] = $streamUrl; // 更新 streamUrl
+                            $row['streamUrl'] = $streamUrl;
 
                             // 过滤重复数据
                             $channelKey = $rowGroupTitle . $finalChannelName . $streamUrl;
@@ -1485,7 +1463,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                 if ($parts) $headerStr = ',HEADERS={' . implode(',', $parts) . '}';
             }
             
-            // 添加 EXTKU9OPT 到 genre 行
+            // 添加 EXTKU9OPT
             $ku9OptStr = '';
             if (!empty($headers['ku9opt'])) {
                 $optParts = [];
