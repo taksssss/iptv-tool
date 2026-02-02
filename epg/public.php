@@ -576,19 +576,29 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     break;
 
                 case 'extvlcopt':
-                    $jsonOpts = json_decode($value, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($jsonOpts)) {
+                    $jsonOpts = safeJsonDecode($value);
+                    if ($jsonOpts !== null) {
                         foreach ($jsonOpts as $k => $v) {
-                            $extvlcoptPattern .= "#EXTVLCOPT:" . $k . "=" . $v . "\n";
+                            // 验证和清理键值
+                            $k = str_replace(["\n", "\r"], '', $k);
+                            $v = str_replace(["\n", "\r"], '', $v);
+                            if (!empty($k)) {
+                                $extvlcoptPattern .= "#EXTVLCOPT:" . $k . "=" . $v . "\n";
+                            }
                         }
                     }
                     break;
 
                 case 'extku9opt':
-                    $jsonOpts = json_decode($value, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($jsonOpts)) {
+                    $jsonOpts = safeJsonDecode($value);
+                    if ($jsonOpts !== null) {
                         foreach ($jsonOpts as $k => $v) {
-                            $extvlcoptPattern .= "#EXTKU9OPT:" . $k . "=" . $v . "#";
+                            // 验证和清理键值，防止注入
+                            $k = str_replace(['#', "\n", "\r"], '', $k);
+                            $v = str_replace(['#', "\n", "\r"], '', $v);
+                            if (!empty($k)) {
+                                $extvlcoptPattern .= "#EXTKU9OPT:" . $k . "=" . $v . "#";
+                            }
                         }
                         // Remove trailing #
                         $extvlcoptPattern = rtrim($extvlcoptPattern, "#") . "\n";
@@ -596,8 +606,8 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     break;
 
                 case 'extinfopt':
-                    $jsonOpts = json_decode($value, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($jsonOpts)) {
+                    $jsonOpts = safeJsonDecode($value);
+                    if ($jsonOpts !== null) {
                         foreach ($jsonOpts as $k => $v) {
                             $extInfOpt[$k] = $v;
                         }
@@ -836,11 +846,13 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                         $genreParts = explode(',', $parts[1]);
                         $groupKu9Opt = '';
                         if (count($genreParts) > 1) {
-                            // 查找 DE=xxx#SC=xxx 部分
+                            // 查找 DE=xxx#SC=xxx 部分（跳过 HEADERS= 和其他已知格式）
                             for ($i = 1; $i < count($genreParts); $i++) {
                                 $genrePart = trim($genreParts[$i]);
-                                // 检查是否包含 = 字符，表示可能是键值对
-                                if (strpos($genrePart, '=') !== false && stripos($genrePart, 'HEADERS=') === false) {
+                                // 检查是否包含 = 字符且不是已知的特殊参数
+                                if (strpos($genrePart, '=') !== false 
+                                    && stripos($genrePart, 'HEADERS=') === false
+                                    && stripos($genrePart, 'PROXY=') === false) {
                                     // 转换为 #EXTKU9OPT:KEY=VALUE# 格式
                                     $groupKu9Opt = "#EXTKU9OPT:" . $genrePart . "\n";
                                     break;
@@ -983,6 +995,18 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
     return $errorLog ?: true;
 }
 
+// 安全的 JSON 解码辅助函数
+function safeJsonDecode($jsonStr) {
+    if (empty($jsonStr)) {
+        return null;
+    }
+    $result = json_decode($jsonStr, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($result)) {
+        return $result;
+    }
+    return null;
+}
+
 // 提取 #EXTINFOPT 并删除
 function extractExtInfOpt(&$streamUrl) {
     if (preg_match('/^#EXTINFOPT:(.+)$/m', $streamUrl, $m)) {
@@ -995,16 +1019,16 @@ function extractExtInfOpt(&$streamUrl) {
 // 解析 URL 中的 #EXTKU9OPT 参数
 // 格式: URL #EXTKU9OPT={"DE":"xxx", "SC":"xxx"}
 // 或者: URL #EXTKU9OPT={"分组1":{"DE":"xxx"}, "分组2":{"DE":"yyy"}}
-function parseExtKu9OptFromUrl(&$url, $groupTitle = '') {
+function parseExtKU9OptFromUrl(&$url, $groupTitle = '') {
     $ku9opt = '';
     
-    // 检查是否包含 #EXTKU9OPT=
-    if (preg_match('/\s+#EXTKU9OPT=(\{.+\})\s*$/i', $url, $matches)) {
+    // 检查是否包含 #EXTKU9OPT=（使用非贪婪匹配）
+    if (preg_match('/\s+#EXTKU9OPT=(\{.+?\})\s*$/i', $url, $matches)) {
         $jsonStr = $matches[1];
-        $url = trim(preg_replace('/\s+#EXTKU9OPT=\{.+\}\s*$/i', '', $url));
+        $url = trim(preg_replace('/\s+#EXTKU9OPT=\{.+?\}\s*$/i', '', $url));
         
-        $jsonOpts = json_decode($jsonStr, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($jsonOpts)) {
+        $jsonOpts = safeJsonDecode($jsonStr);
+        if ($jsonOpts !== null) {
             // 检查是否是分组特定的配置
             $optsToUse = [];
             foreach ($jsonOpts as $k => $v) {
@@ -1025,9 +1049,16 @@ function parseExtKu9OptFromUrl(&$url, $groupTitle = '') {
             if (!empty($optsToUse)) {
                 $parts = [];
                 foreach ($optsToUse as $k => $v) {
-                    $parts[] = "$k=$v";
+                    // 验证和清理键值，防止注入
+                    $k = str_replace(['#', "\n", "\r"], '', $k);
+                    $v = str_replace(['#', "\n", "\r"], '', $v);
+                    if (!empty($k)) {
+                        $parts[] = "$k=$v";
+                    }
                 }
-                $ku9opt = "#EXTKU9OPT:" . implode('#', $parts) . "\n";
+                if (!empty($parts)) {
+                    $ku9opt = "#EXTKU9OPT:" . implode('#', $parts) . "\n";
+                }
             }
         }
     }
@@ -1036,7 +1067,7 @@ function parseExtKu9OptFromUrl(&$url, $groupTitle = '') {
 }
 
 // 从 streamUrl 中提取 #EXTKU9OPT 内容为键值对
-function extractExtKu9OptFromStreamUrl($streamUrl) {
+function extractExtKU9OptFromStreamUrl($streamUrl) {
     $opts = [];
     if (preg_match('/^#EXTKU9OPT:(.+)$/m', $streamUrl, $m)) {
         $optStr = trim($m[1]);
@@ -1130,13 +1161,18 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                 // 处理分组的其他参数
                 for ($i = 1; $i < count($groupParts); $i++) {
                     $part = $groupParts[$i];
-                    // 检查是否是 #EXTKU9OPT 参数
-                    if (preg_match('/^#EXTKU9OPT=(\{.+\})$/i', $part, $matches)) {
-                        $jsonOpts = json_decode($matches[1], true);
-                        if (json_last_error() === JSON_ERROR_NONE && is_array($jsonOpts)) {
+                    // 检查是否是 #EXTKU9OPT 参数（使用非贪婪匹配）
+                    if (preg_match('/^#EXTKU9OPT=(\{.+?\})$/i', $part, $matches)) {
+                        $jsonOpts = safeJsonDecode($matches[1]);
+                        if ($jsonOpts !== null) {
                             $optParts = [];
                             foreach ($jsonOpts as $k => $v) {
-                                $optParts[] = "$k=$v";
+                                // 验证和清理键值
+                                $k = str_replace(['#', "\n", "\r"], '', $k);
+                                $v = str_replace(['#', "\n", "\r"], '', $v);
+                                if (!empty($k)) {
+                                    $optParts[] = "$k=$v";
+                                }
                             }
                             if ($optParts) {
                                 $groupKu9Opt = "#EXTKU9OPT:" . implode('#', $optParts) . "\n";
