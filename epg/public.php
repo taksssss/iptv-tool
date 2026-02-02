@@ -1140,32 +1140,35 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
             $line = trim($line, " ,");
             if (empty($line)) continue;            
             if (strpos($line, '#') === 0) {
-                $groupParts = array_map('trim', explode(',', substr($line, 1)));
-                $currentGroup = $groupParts[0];  // 提取分组名
-                $currentGroupSources = [];
-                $groupKu9Opt = '';
+                // 提取分组定义行，需要特殊处理 #EXTKU9OPT 中的 JSON
+                $lineContent = substr($line, 1); // 移除开头的 #
                 
-                for ($i = 1; $i < count($groupParts); $i++) {
-                    $part = $groupParts[$i];
-                    if (preg_match('/^#EXTKU9OPT=(\{.+?\})$/i', $part, $matches)) {
-                        $jsonOpts = safeJsonDecode($matches[1]);
-                        if ($jsonOpts !== null) {
-                            $optParts = [];
-                            foreach ($jsonOpts as $k => $v) {
-                                $k = str_replace(['#', "\n", "\r"], '', $k);
-                                $v = str_replace(['#', "\n", "\r"], '', $v);
-                                if (!empty($k)) {
-                                    $optParts[] = "$k=$v";
-                                }
-                            }
-                            if ($optParts) {
-                                $groupKu9Opt = "#EXTKU9OPT:" . implode('#', $optParts) . "\n";
+                // 先提取 #EXTKU9OPT=... 部分（如果存在）
+                $groupKu9Opt = '';
+                if (preg_match('/#EXTKU9OPT=(\{.+\})/i', $lineContent, $ku9Match)) {
+                    $jsonStr = $ku9Match[1];
+                    $jsonOpts = safeJsonDecode($jsonStr);
+                    if ($jsonOpts !== null) {
+                        $optParts = [];
+                        foreach ($jsonOpts as $k => $v) {
+                            $k = str_replace(['#', "\n", "\r"], '', $k);
+                            $v = str_replace(['#', "\n", "\r"], '', $v);
+                            if (!empty($k)) {
+                                $optParts[] = "$k=$v";
                             }
                         }
-                    } else {
-                        $currentGroupSources[] = $part;
+                        if ($optParts) {
+                            $groupKu9Opt = "#EXTKU9OPT:" . implode('#', $optParts) . "\n";
+                        }
                     }
+                    // 从行内容中移除 #EXTKU9OPT 部分
+                    $lineContent = trim(preg_replace('/#EXTKU9OPT=\{.+\}/i', '', $lineContent));
                 }
+                
+                // 现在可以安全地按逗号分割（JSON 部分已移除）
+                $groupParts = array_map('trim', explode(',', $lineContent));
+                $currentGroup = $groupParts[0];  // 提取分组名
+                $currentGroupSources = array_slice($groupParts, 1);  // 其余部分是源
                 
                 $templateGroups[$currentGroup]['source'] = $currentGroupSources; // 存储为数组
                 if (!empty($groupKu9Opt)) {
