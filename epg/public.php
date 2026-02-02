@@ -1151,6 +1151,10 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     if ($jsonOpts !== null) {
                         $optParts = [];
                         foreach ($jsonOpts as $k => $v) {
+                            // 跳过数组值（嵌套的分组特定配置应该只在 URL 中使用）
+                            if (is_array($v)) {
+                                continue;
+                            }
                             $k = str_replace(['#', "\n", "\r"], '', $k);
                             $v = str_replace(['#', "\n", "\r"], '', $v);
                             if (!empty($k)) {
@@ -1169,6 +1173,8 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                 $groupParts = array_map('trim', explode(',', $lineContent));
                 $currentGroup = $groupParts[0];  // 提取分组名
                 $currentGroupSources = array_slice($groupParts, 1);  // 其余部分是源
+                // 过滤空源
+                $currentGroupSources = array_filter($currentGroupSources, 'strlen');
                 
                 $templateGroups[$currentGroup]['source'] = $currentGroupSources; // 存储为数组
                 if (!empty($groupKu9Opt)) {
