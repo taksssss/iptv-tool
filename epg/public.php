@@ -588,6 +588,15 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     }
                     break;
 
+                case 'extinfopt':
+                    $jsonOpts = safeJsonDecode($value);
+                    if ($jsonOpts !== null) {
+                        foreach ($jsonOpts as $k => $v) {
+                            $extInfOpt[$k] = $v;
+                        }
+                    }
+                    break;
+
                 case 'extku9opt':
                     $jsonOpts = safeJsonDecode($value);
                     if ($jsonOpts !== null) {
@@ -605,15 +614,6 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                         }
                         if (!empty($parts)) {
                             $extvlcoptPattern .= "#EXTKU9OPT:" . implode('#', $parts) . "\n";
-                        }
-                    }
-                    break;
-
-                case 'extinfopt':
-                    $jsonOpts = safeJsonDecode($value);
-                    if ($jsonOpts !== null) {
-                        foreach ($jsonOpts as $k => $v) {
-                            $extInfOpt[$k] = $v;
                         }
                     }
                     break;
@@ -1487,7 +1487,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     $optParts[] = "$k=$v";
                 }
                 if ($optParts) {
-                    $ku9OptStr = ',' . implode('#', $optParts);
+                    $ku9OptStr = '#' . implode('#', $optParts);
                 }
             }
 
