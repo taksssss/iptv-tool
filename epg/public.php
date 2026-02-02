@@ -593,6 +593,10 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                     if ($jsonOpts !== null) {
                         $parts = [];
                         foreach ($jsonOpts as $k => $v) {
+                            // 跳过数组值（嵌套的分组特定配置应该只在 URL 中使用）
+                            if (is_array($v)) {
+                                continue;
+                            }
                             $k = str_replace(['#', "\n", "\r"], '', $k);
                             $v = str_replace(['#', "\n", "\r"], '', $v);
                             if (!empty($k)) {
