@@ -1068,8 +1068,27 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
             if (strpos($line, '#') === 0) {
                 $groupParts = array_map('trim', explode(',', substr($line, 1)));
                 $currentGroup = $groupParts[0];  // 提取分组名
-                $currentGroupSources = array_slice($groupParts, 1);  // 提取分组源（多个值）
+                $currentGroupSources = [];
+                $currentGroupKu9Opt = [];
+                
+                // 分离来源和 #EXTKU9OPT
+                foreach (array_slice($groupParts, 1) as $part) {
+                    if (preg_match('/^#EXTKU9OPT:(.+)$/i', $part, $m)) {
+                        // 解析 #EXTKU9OPT:KEY1=VAL1#KEY2=VAL2
+                        $pairs = explode('#', $m[1]);
+                        foreach ($pairs as $pair) {
+                            if (strpos($pair, '=') !== false) {
+                                list($k, $v) = explode('=', $pair, 2);
+                                $currentGroupKu9Opt[trim($k)] = trim($v);
+                            }
+                        }
+                    } else {
+                        $currentGroupSources[] = $part;
+                    }
+                }
+                
                 $templateGroups[$currentGroup]['source'] = $currentGroupSources; // 存储为数组
+                $templateGroups[$currentGroup]['ku9opt'] = $currentGroupKu9Opt; // 存储 EXTKU9OPT
             } else {
                 $channels = array_map('trim', explode(',', $line));
                 foreach ($channels as $channel) {
@@ -1115,6 +1134,19 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     // 更新信息
                     $extInfOptStr = extractExtInfOpt($streamUrl);
                     $m3uStreamUrl = $streamUrl . (($m3uCommentEnabled && strpos($streamUrl, '$') === false) ? "\${$groupPrefix}{$groupTitle}" : "");
+                    
+                    // 应用分组级别的 EXTKU9OPT
+                    if (!empty($groupInfo['ku9opt'])) {
+                        $pairs = [];
+                        foreach ($groupInfo['ku9opt'] as $k => $v) {
+                            $pairs[] = $k . '=' . $v;
+                        }
+                        $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
+                        // 移除 streamUrl 中已有的 EXTKU9OPT
+                        $m3uStreamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $m3uStreamUrl);
+                        $m3uStreamUrl = $groupKu9OptStr . $m3uStreamUrl;
+                    }
+                    
                     $rowGroupTitle = $templateGroupTitle === 'default' ? $groupPrefix . $groupTitle : $templateGroupTitle;
                     $row['groupTitle'] = $rowGroupTitle;
                     $row['rawGroupTitle'] = $groupTitle;
@@ -1184,6 +1216,19 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                             // 更新信息
                             $extInfOptStr = extractExtInfOpt($streamUrl);
                             $m3uStreamUrl = $streamUrl . (($m3uCommentEnabled && strpos($streamUrl, '$') === false) ? "\${$groupPrefix}{$groupTitle}" : "");
+                            
+                            // 应用分组级别的 EXTKU9OPT
+                            if (!empty($groupInfo['ku9opt'])) {
+                                $pairs = [];
+                                foreach ($groupInfo['ku9opt'] as $k => $v) {
+                                    $pairs[] = $k . '=' . $v;
+                                }
+                                $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
+                                // 移除 streamUrl 中已有的 EXTKU9OPT
+                                $m3uStreamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $m3uStreamUrl);
+                                $m3uStreamUrl = $groupKu9OptStr . $m3uStreamUrl;
+                            }
+                            
                             $rowGroupTitle = $templateGroupTitle === 'default' ? $groupPrefix . $groupTitle : $templateGroupTitle;
                             $row['groupTitle'] = $rowGroupTitle;
                             $row['rawGroupTitle'] = $groupTitle;
