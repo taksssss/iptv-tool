@@ -521,8 +521,8 @@ function applyGroupKu9Opt($streamUrl, $groupKu9Opt) {
     }
     $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
     
-    // 移除 streamUrl 中已有的 EXTKU9OPT
-    $streamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $streamUrl);
+    // 移除 streamUrl 中已有的 EXTKU9OPT (不区分大小写，正确处理不同行尾)
+    $streamUrl = preg_replace('/^#EXTKU9OPT:[^\r\n]*(?:\r?\n)?/mi', '', $streamUrl);
     
     return $groupKu9OptStr . $streamUrl;
 }
@@ -1355,7 +1355,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
         }
 
         // 提取 EXTKU9OPT
-        if (preg_match('/#EXTKU9OPT:([^\n]+)/', $streamUrl, $m)) {
+        if (preg_match('/#EXTKU9OPT:([^\n]+)/i', $streamUrl, $m)) {
             $value = trim($m[1]);
             $ku9SecondaryGrouping
                 ? $groupHeaders[$row['category']][$genre]['ku9opt'] = $value
