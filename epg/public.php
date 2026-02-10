@@ -509,6 +509,24 @@ function parseExtKu9Opt($raw, $groupTitle = '') {
     return [];
 }
 
+// 应用分组级别 EXTKU9OPT 到 streamUrl
+function applyGroupKu9Opt($streamUrl, $groupKu9Opt) {
+    if (empty($groupKu9Opt)) {
+        return $streamUrl;
+    }
+    
+    $pairs = [];
+    foreach ($groupKu9Opt as $k => $v) {
+        $pairs[] = $k . '=' . $v;
+    }
+    $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
+    
+    // 移除 streamUrl 中已有的 EXTKU9OPT
+    $streamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $streamUrl);
+    
+    return $groupKu9OptStr . $streamUrl;
+}
+
 // 解析 txt、m3u 直播源，并生成直播列表（包含分组、地址等信息）
 function doParseSourceInfo($urlLine = null, $parseAll = false) {
     global $db;
@@ -1136,16 +1154,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                     $m3uStreamUrl = $streamUrl . (($m3uCommentEnabled && strpos($streamUrl, '$') === false) ? "\${$groupPrefix}{$groupTitle}" : "");
                     
                     // 应用分组级别的 EXTKU9OPT
-                    if (!empty($groupInfo['ku9opt'])) {
-                        $pairs = [];
-                        foreach ($groupInfo['ku9opt'] as $k => $v) {
-                            $pairs[] = $k . '=' . $v;
-                        }
-                        $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
-                        // 移除 streamUrl 中已有的 EXTKU9OPT
-                        $m3uStreamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $m3uStreamUrl);
-                        $m3uStreamUrl = $groupKu9OptStr . $m3uStreamUrl;
-                    }
+                    $m3uStreamUrl = applyGroupKu9Opt($m3uStreamUrl, $groupInfo['ku9opt'] ?? []);
                     
                     $rowGroupTitle = $templateGroupTitle === 'default' ? $groupPrefix . $groupTitle : $templateGroupTitle;
                     $row['groupTitle'] = $rowGroupTitle;
@@ -1218,16 +1227,7 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                             $m3uStreamUrl = $streamUrl . (($m3uCommentEnabled && strpos($streamUrl, '$') === false) ? "\${$groupPrefix}{$groupTitle}" : "");
                             
                             // 应用分组级别的 EXTKU9OPT
-                            if (!empty($groupInfo['ku9opt'])) {
-                                $pairs = [];
-                                foreach ($groupInfo['ku9opt'] as $k => $v) {
-                                    $pairs[] = $k . '=' . $v;
-                                }
-                                $groupKu9OptStr = "#EXTKU9OPT:" . implode('#', $pairs) . "\n";
-                                // 移除 streamUrl 中已有的 EXTKU9OPT
-                                $m3uStreamUrl = preg_replace('/^#EXTKU9OPT:.*$(\r?\n)?/m', '', $m3uStreamUrl);
-                                $m3uStreamUrl = $groupKu9OptStr . $m3uStreamUrl;
-                            }
+                            $m3uStreamUrl = applyGroupKu9Opt($m3uStreamUrl, $groupInfo['ku9opt'] ?? []);
                             
                             $rowGroupTitle = $templateGroupTitle === 'default' ? $groupPrefix . $groupTitle : $templateGroupTitle;
                             $row['groupTitle'] = $rowGroupTitle;
