@@ -1067,9 +1067,23 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
             if (empty($line)) continue;            
             if (strpos($line, '#') === 0) {
                 $groupParts = array_map('trim', explode(',', substr($line, 1)));
-                $currentGroup = $groupParts[0];  // 提取分组名
+                
+                // 解析分组名和别名
+                $groupTitlePart = $groupParts[0];
+                if (strpos($groupTitlePart, ':') !== false) {
+                    $titleParts = explode(':', $groupTitlePart);
+                    $currentGroup = $titleParts[0];
+                    $currentGroupAliases = array_slice($titleParts, 1);
+                } else {
+                    $currentGroup = $groupTitlePart;
+                    $currentGroupAliases = [];
+                }
+
                 $currentGroupSources = array_slice($groupParts, 1);  // 提取分组源（多个值）
-                $templateGroups[$currentGroup]['source'] = $currentGroupSources; // 存储为数组
+                $templateGroups[$currentGroup] = [
+                    'source' => $currentGroupSources, // 分组源
+                    'alias' => $currentGroupAliases, // 别名
+                ];
             } else {
                 $channels = array_map('trim', explode(',', $line));
                 foreach ($channels as $channel) {
@@ -1106,9 +1120,26 @@ function generateLiveFiles($channelData, $fileName, $saveOnly = false) {
                         'source'      => $source
                     ] = $row;
 
+                    // 检查分组标题是否匹配（包含别名判断）
                     $matchGroupTitle = $groupPrefix . $groupTitle;
-                    if ((!empty($groupInfo['source']) && !in_array($source, $groupInfo['source'])) || ($templateGroupTitle !== 'default' && 
-                        (empty($matchGroupTitle) || stripos($matchGroupTitle, $templateGroupTitle) === false && stripos($templateGroupTitle, $matchGroupTitle) === false))) {
+                    $isGroupMatched = false;
+                    if ($templateGroupTitle === 'default' || 
+                        (!empty($matchGroupTitle) && stripos($matchGroupTitle, $templateGroupTitle) !== false) ||
+                        stripos($templateGroupTitle, $matchGroupTitle) !== false) {
+                        $isGroupMatched = true;
+                    } elseif (!empty($groupInfo['alias'])) {
+                        // 检查别名是否匹配
+                        foreach ($groupInfo['alias'] as $alias) {
+                            if ((!empty($matchGroupTitle) && stripos($matchGroupTitle, $alias) !== false) ||
+                                stripos($alias, $matchGroupTitle) !== false) {
+                                $isGroupMatched = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ((!empty($groupInfo['source']) && !in_array($source, $groupInfo['source'])) || 
+                        ($templateGroupTitle !== 'default' && !$isGroupMatched)) {
                         continue;
                     }
 
