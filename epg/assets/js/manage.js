@@ -22,7 +22,7 @@ document.getElementById('settingsForm').addEventListener('submit', function(even
         'token_range', 'user_agent_range', 'notify', 'access_log_enable', 'target_time_zone', 'ip_list_mode', 'live_source_config', 
         'live_template_enable', 'live_fuzzy_match', 'live_url_comment', 'live_tvg_logo_enable', 'live_tvg_id_enable', 
         'live_tvg_name_enable', 'live_source_auto_sync', 'live_channel_name_process', 'gen_live_update_time', 'm3u_icon_first', 
-        'ku9_secondary_grouping', 'tag_gen_mode', 'check_ipv6', 'min_resolution_width', 'min_resolution_height', 'urls_limit', 
+        'ku9_secondary_grouping', 'tag_gen_mode', 'check_speed_filter', 'min_resolution_width', 'min_resolution_height', 'urls_limit', 
         'sort_by_delay', 'check_speed_auto_sync', 'check_speed_interval_factor'];
 
     // 创建隐藏字段并将其添加到表单
@@ -2281,6 +2281,55 @@ function updateNotifyInfo() {
     // 内容写入 config.json 文件
     saveConfigField({
         serverchan_key: newSCKey
+    })
+    .then(data => {
+        if (data.success) {
+            showMessageModal('修改成功');
+        } else {
+            showMessageModal('修改失败');
+        }
+    })
+    .catch(err => showMessageModal('保存过程中出现错误: ' + err));
+}
+
+// 修改测速过滤规则对话框
+async function changeCheckSpeedFilterRules() {
+    const filterEnabled = document.getElementById('check_speed_filter')?.value ?? "1";
+    if (filterEnabled === '0') return;
+
+    try {
+        const res = await fetch('manage.php?get_config=1');
+        const config = await res.json();
+        const currentRules = (config.check_speed_filter_rules).trim();
+
+        showMessageModal('');
+        document.getElementById('messageModalMessage').innerHTML = `
+            <div class="modal-inner" style="width: 500px;">
+                <h3>修改测速过滤规则</h3>
+                <div style="margin-bottom: 10px; text-align: left;">
+                    过滤规则仅对<strong>直播地址</strong>生效<br>
+                    每行一条规则：<br>
+                    普通表达式：包含即过滤（例如：m3u8）<br>
+                    正则表达式：以 regex: 开头（内置 IPv6 过滤规则）<br>
+                    使用 <code>#</code> 开头可临时停用该行规则
+                </div>
+                <textarea id="newCheckSpeedFilterRules" style="min-height: 200px; margin-bottom: 15px;">${currentRules}</textarea>
+                <button onclick="updateCheckSpeedFilterRules()" style="margin-bottom: -10px;">确认</button>
+            </div>
+        `;
+    } catch (err) {
+        console.error('获取 config 失败:', err);
+        showMessageModal('无法获取配置信息，请稍后重试');
+    }
+}
+
+// 更新测速过滤规则到 config.json
+function updateCheckSpeedFilterRules() {
+    const textarea = document.getElementById('newCheckSpeedFilterRules');
+    const newRules = (textarea?.value || '').trim().split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+
+    saveConfigField({
+        check_speed_filter_rules: newRules
     })
     .then(data => {
         if (data.success) {

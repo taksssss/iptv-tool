@@ -522,16 +522,16 @@
         <div>
             即将开始检测每个直播源的访问速度及分辨率，<br>
             该过程可能需要较长时间，请耐心等待。<br>
-            注意：结果不一定准确，且暂无法解析 IPv6 源。<br><br>
+            注意：结果不一定准确，可通过测速过滤规则排除指定源。<br><br>
         </div>
 
         <!-- 第一行 -->
         <div class="row">
             <div class="column">
-                <label for="check_ipv6">校验 IPv6 源：</label>
-                <select id="check_ipv6" name="check_ipv6" required>
-                    <option value="1" <?php if (@$Config['check_ipv6'] == 1) echo 'selected'; ?>>是</option>
-                    <option value="0" <?php if (@$Config['check_ipv6'] == 0) echo 'selected'; ?>>否</option>
+                <label for="check_speed_filter"><span class="blue-span" onclick="changeCheckSpeedFilterRules()">测速过滤：</span></label>
+                <select id="check_speed_filter" name="check_speed_filter" required onchange="changeCheckSpeedFilterRules()">
+                    <option value="1" <?php if (($Config['check_speed_filter'] ?? 1) == 1) echo 'selected'; ?>>是</option>
+                    <option value="0" <?php if (($Config['check_speed_filter'] ?? 1) == 0) echo 'selected'; ?>>否</option>
                 </select>
             </div>
             <div class="column" style="display: flex; align-items: center;">
@@ -542,15 +542,15 @@
                 <input type="tel" id="min_resolution_height" placeholder="高度" style="text-align: center;" 
                     value="<?= $Config['min_resolution_height'] ?? 0; ?>">
             </div>
+        </div>
+
+        <!-- 第二行 -->
+        <div class="row">
             <div class="column" style="display: flex; align-items: center;">
                 <label for="urls_limit">单频道接口数量：</label>
                 <input type="tel" id="urls_limit" placeholder="默认不限制" style="text-align: center;" 
                     value="<?= $Config['urls_limit'] ?? 0; ?>">
             </div>
-        </div>
-
-        <!-- 第二行 -->
-        <div class="row">
             <div class="column">
                 <label for="sort_by_delay">按响应速度排序：</label>
                 <select id="sort_by_delay" name="sort_by_delay" required>
@@ -558,6 +558,10 @@
                     <option value="0" <?php if (@$Config['sort_by_delay'] == 0) echo 'selected'; ?>>否</option>
                 </select>
             </div>
+        </div>
+
+        <!-- 第三行 -->
+        <div class="row">
             <div class="column">
                 <label for="check_speed_auto_sync">跟随 EPG 测速：</label>
                 <select id="check_speed_auto_sync" name="check_speed_auto_sync" required>
@@ -577,7 +581,7 @@
             </div>            
         </div>
 
-        <!-- 第三行 -->
+        <!-- 第四行 -->
         <div class="button-container button-container-check-speed" style="margin-top: 25px;">
             <button id="foregroundCheckBtn" onclick="showExecResult('check.php', () => showModal('live', popup = false))">前台测速</button>
             <button id="backgroundCheckBtn" onclick="showExecResult('check.php?backgroundMode=1', () => showModal('live', popup = false), fullSize = false)">后台测速</button>

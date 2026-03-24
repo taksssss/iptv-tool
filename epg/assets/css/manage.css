@@ -264,7 +264,8 @@ input[type="tel"] {
 }
 
 .cron-log-modal-content,
-.more-live-setting-modal-content {
+.more-live-setting-modal-content,
+.check-speed-modal-content {
     width: 500px;
 }
 
