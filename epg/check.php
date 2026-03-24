@@ -9,7 +9,7 @@
  * 功能说明：
  * - 前台模式：实时测速并输出结果（需保持浏览器开启）
  * - 后台模式：支持 backgroundMode 参数，后台执行测速任务，不依赖浏览器
- * - 支持 IPv6 检测、最低分辨率限制、测速结果缓存与复用
+ * - 支持测速过滤规则、最低分辨率限制、测速结果缓存与复用
  * - 支持 cleanMode 参数，清理测速数据并重置频道状态
  * - 支持按延迟排序、同频道接口数量限制，并自动更新数据库及生成 M3U/TXT 文件
  *
@@ -54,7 +54,35 @@ header('X-Accel-Buffering: no');
 require_once 'public.php';
 
 // 读取 Config 文件
-$checkIPv6 = $Config['check_ipv6'] ?? 0;
+$checkSpeedFilter = $Config['check_speed_filter'] ?? 1;
+$checkSpeedFilterRulesRaw = trim((string)($Config['check_speed_filter_rules'] ?? ''));
+$checkSpeedFilterRules = array_values(array_filter(
+    array_map('trim', preg_split('/\r\n|\r|\n/', $checkSpeedFilterRulesRaw)),
+    function ($rule) {
+        return !preg_match('/^\s*(#|$)/', $rule);
+    }
+));
+
+function hitCheckSpeedFilterRule($streamUrl, $rules) {
+    foreach ($rules as $rule) {
+        if (stripos($rule, 'regex:') === 0) {
+            $pattern = substr($rule, 6);
+            if (@preg_match($pattern, '') === false) {
+                continue;
+            }
+            if (preg_match($pattern, $streamUrl)) {
+                return $rule;
+            }
+            continue;
+        }
+
+        if (stripos($streamUrl, $rule) !== false) {
+            return $rule;
+        }
+    }
+    return false;
+}
+
 $minWidth = $Config['min_resolution_width'] ?? 0;
 $minHeight = $Config['min_resolution_height'] ?? 0;
 $urlsLimit = $Config['urls_limit'] ?? 0;
@@ -97,15 +125,12 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $channels[] = array_values($row);
 }
 
-// 定位字段索引
-$streamUrlIndex = array_search('streamUrl', $channelHeaders);
-$channelNameIndex = array_search('channelName', $channelHeaders);
-$disableIndex = array_search('disable', $channelHeaders);
-$modifiedIndex = array_search('modified', $channelHeaders);
-
-// 确保必要字段存在
-if ($streamUrlIndex === false) {
-    die('channels 表缺少必要字段');
+// 定位字段索引并校验
+foreach (['groupPrefix', 'groupTitle', 'streamUrl', 'channelName', 'disable', 'modified'] as $field) {
+    ${$field . 'Index'} = array_search($field, $channelHeaders);
+    if (${$field . 'Index'} === false) {
+        die("channels 表缺少必要字段: {$field}");
+    }
 }
 
 // 初始化测速映射表
@@ -145,10 +170,13 @@ foreach ($channels as $i => $channel) {
 
     echo "(" . ($i + 1) . "/{$total}): {$channelName} - {$streamUrl}<br>";
 
-    // 跳过 IPv6 源
-    if ($checkIPv6 === 0 && preg_match('#^https?://\[[a-f0-9:]+\]#i', $streamUrl)) {
-        echo '<strong><span style="color: red;">跳过 IPv6 源</span></strong><br><br>';
-        continue;
+    // 按规则过滤测速源
+    if ((int)$checkSpeedFilter === 1) {
+        $hitRule = hitCheckSpeedFilterRule($streamUrl, $checkSpeedFilterRules);
+        if ($hitRule !== false) {
+            echo '<strong><span style="color: red;">已过滤测速源（规则：' . htmlspecialchars($hitRule, ENT_QUOTES, 'UTF-8') . '）</span></strong><br><br>';
+            continue;
+        }
     }
 
     // 初始化变量
@@ -233,10 +261,11 @@ echo "检测完成，已更新 channels_info 表。<br>";
 
 // 按响应速度排序
 if ($sortByDelay == 1) {
-    // 按频道名称分组
+    // 按 channelName + groupPrefix + groupTitle 分组
     $groupedChannels = [];
     foreach ($channels as $channel) {
-        $groupedChannels[$channel[$channelNameIndex]][] = $channel;
+        $key = md5($channel[$channelNameIndex] . $channel[$groupPrefixIndex] . $channel[$groupTitleIndex]);
+        $groupedChannels[$key][] = $channel;
     }
 
     // 对每个分组进行排序
