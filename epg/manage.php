@@ -666,14 +666,28 @@ try {
                     $dbResponse = ['success' => true, 'changed' => false, 'logs' => [], 'has_more' => false];
                     break;
                 }
+
+                // 一次性从 ip_location 表取出所有涉及 IP 的归属地
+                $uniqueIps = array_unique(array_column($rows, 'client_ip'));
+                $locations = [];
+                if (!empty($uniqueIps)) {
+                    $placeholders = implode(',', array_fill(0, count($uniqueIps), '?'));
+                    $stmt = $db->prepare("SELECT ip, location FROM ip_location WHERE ip IN ($placeholders)");
+                    $stmt->execute(array_values($uniqueIps));
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                        $locations[$lr['ip']] = $lr['location'];
+                    }
+                }
             
                 $logs = [];
                 $minId = PHP_INT_MAX;
                 $maxId = 0;
                 foreach ($rows as $row) {
+                    $ip = $row['client_ip'];
+                    $locationPart = isset($locations[$ip]) ? "[{$locations[$ip]}] " : '';
                     $logs[] = [
                         'id' => (int)$row['id'],
-                        'text' => "[{$row['access_time']}] [{$row['client_ip']}] "
+                        'text' => "[{$row['access_time']}] [{$ip}] {$locationPart}"
                             . ($row['access_denied'] ? "{$row['deny_message']} " : '')
                             . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
                     ];
@@ -687,18 +701,6 @@ try {
                     $checkStmt = $db->prepare("SELECT COUNT(*) FROM access_log WHERE id < ?");
                     $checkStmt->execute([$minId]);
                     $hasMore = $checkStmt->fetchColumn() > 0;
-                }
-
-                // 从 ip_location 表获取已知归属地
-                $uniqueIps = array_unique(array_column($rows, 'client_ip'));
-                $locations = [];
-                if (!empty($uniqueIps)) {
-                    $placeholders = implode(',', array_fill(0, count($uniqueIps), '?'));
-                    $stmt = $db->prepare("SELECT ip, location FROM ip_location WHERE ip IN ($placeholders)");
-                    $stmt->execute(array_values($uniqueIps));
-                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lr) {
-                        $locations[$lr['ip']] = $lr['location'];
-                    }
                 }
             
                 $dbResponse = [ 
