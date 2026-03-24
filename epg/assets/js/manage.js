@@ -781,7 +781,7 @@ function queryIpLocation(ip, showModal = false) {
     };
 
     const script = document.createElement("script");
-    script.src = `http://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
+    script.src = `https://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
     document.body.appendChild(script);
 }
 
@@ -2300,7 +2300,10 @@ async function changeCheckSpeedFilterRules() {
     try {
         const res = await fetch('manage.php?get_config=1');
         const config = await res.json();
-        const currentRules = (config.check_speed_filter_rules).trim();
+        const currentRules =
+            config.check_speed_filter_rules == null
+                ? 'regex:/^https?:\\/\\/\\[[a-f0-9:]+\\]/i'
+                : config.check_speed_filter_rules.trim();
 
         showMessageModal('');
         document.getElementById('messageModalMessage').innerHTML = `
