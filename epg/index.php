@@ -15,13 +15,8 @@ require_once 'public.php';
 
 // 解析参数
 $query = $_SERVER['QUERY_STRING'] ?? '';
-$query = str_replace('?', '&', $query);
-$query_params = [];
-foreach (explode('&', $query) as $pair) {
-    if ($pair === '') continue;
-    [$k, $v] = explode('=', $pair, 2) + ['', ''];
-    $query_params[rawurldecode($k)] = rawurldecode($v);
-}
+$query = str_replace(['?', '5+'], ['&', '5%2B'], $query);
+parse_str($query, $query_params);
 
 // 判断是否允许访问
 function isAllowed($value, array $allowedList, int $range, bool $isLive): bool
@@ -124,7 +119,7 @@ if ($Config['access_log_enable'] ?? 1) {
     $time = date('Y-m-d H:i:s');
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-    $url = rawurldecode($_SERVER['REQUEST_URI'] ?? 'unknown');
+    $url = urldecode($_SERVER['REQUEST_URI'] ?? 'unknown');
     $accessDeniedFlag = $accessDenied ? 1 : 0;
     $denyMsg = $accessDenied ? $denyMessage : null;
 
