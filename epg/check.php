@@ -55,7 +55,9 @@ require_once 'public.php';
 
 // 读取 Config 文件
 $checkSpeedFilter = $Config['check_speed_filter'] ?? 1;
-$checkSpeedFilterRulesRaw = trim((string)($Config['check_speed_filter_rules'] ?? ''));
+$checkSpeedFilterRulesRaw = isset($Config['check_speed_filter_rules'])
+    ? trim((string)$Config['check_speed_filter_rules'])
+    : 'regex:/^https?:\/\/\[[a-f0-9:]+\]/i';
 $checkSpeedFilterRules = array_values(array_filter(
     array_map('trim', preg_split('/\r\n|\r|\n/', $checkSpeedFilterRulesRaw)),
     function ($rule) {
