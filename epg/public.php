@@ -117,6 +117,11 @@ function initialDB() {
             user_agent TEXT NOT NULL,
             access_denied INTEGER DEFAULT 0,
             deny_message TEXT
+        )",
+        "CREATE TABLE IF NOT EXISTS ip_location (
+            ip $typeText PRIMARY KEY,
+            location $typeText NOT NULL,
+            updated_at $typeTime
         )"
     ];
 

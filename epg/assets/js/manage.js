@@ -506,6 +506,9 @@ function showAccessLogModal() {
             .then(r => r.json())
             .then(d => {
                 if (!d.success) return;
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 let content = '';
                 if (d.logs && d.logs.length > 0) {
@@ -535,6 +538,9 @@ function showAccessLogModal() {
             .then(r => r.json())
             .then(d => {
                 if (!d.success || !d.changed || !d.logs || d.logs.length === 0) return;
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 const pre = document.getElementById('accessLogPre');
                 if (!pre) return;
@@ -574,6 +580,9 @@ function showAccessLogModal() {
                     isLoadingOlderLogs = false;
                     return;
                 }
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 const pre = document.getElementById('accessLogPre');
                 if (!pre) return;
@@ -680,6 +689,10 @@ function loadAccessStats() {
         .then(res => res.json())
         .then(d => {
             if (!d.success) return;
+            // 将数据库中已知的归属地写入内存缓存
+            (d.ipData || []).forEach(row => {
+                if (row.location) ipLocationCache[row.ip] = row.location;
+            });
             cachedData = { ipData: d.ipData, dates: d.dates };
             renderAccessStatsTable();
         });
@@ -738,10 +751,13 @@ function renderTableHeader(dates) {
 
 function renderTableRow({ ip, counts, total, deny }) {
     const countCells = counts.map(c => `<td>${c}</td>`).join('');
+    const locationCell = ipLocationCache[ip]
+        ? `<span>${ipLocationCache[ip]}</span>`
+        : `<a href="#" onclick="queryIpLocation('${ip}'); return false;">点击查询</a>`;
     return `
         <tr>
             <td><a href="#" onclick="filterLogByIp('${ip}'); return false;">${ip}</a></td>
-            <td id="loc-${ip}"><a href="#" onclick="queryIpLocation('${ip}'); return false;">点击查询</a></td>
+            <td id="loc-${ip}">${locationCell}</td>
             ${countCells}
             <td>${deny}</td>
             <td>${total}</td>
@@ -756,7 +772,7 @@ function renderTableRow({ ip, counts, total, deny }) {
 function queryIpLocation(ip, showModal = false) {
     const cell = document.getElementById(`loc-${ip}`);
 
-    // 如果有缓存
+    // 如果有内存缓存
     if (ipLocationCache[ip]) {
         if (cell) cell.textContent = ipLocationCache[ip];
         if (showModal) showMessageModal(`${ip} 的归属地：${ipLocationCache[ip]}`);
@@ -766,23 +782,44 @@ function queryIpLocation(ip, showModal = false) {
     if (cell) cell.textContent = "查询中...";
     if (showModal) showMessageModal(`正在查询 ${ip} 的归属地，请稍候...`);
 
-    const callbackName = "jsonp_cb_" + ip.replace(/\./g, "_");
-    window[callbackName] = function(d) {
-        let location = "未找到";
-        if (d && d.data && d.data[0] && d.data[0].location) {
-            location = d.data[0].location;
-            ipLocationCache[ip] = location;
-        }
+    // 优先从数据库读取
+    fetch(`manage.php?get_ip_location=1&ip=${encodeURIComponent(ip)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.location) {
+                ipLocationCache[ip] = data.location;
+                if (cell) cell.textContent = data.location;
+                if (showModal) showMessageModal(`${ip} 的归属地：${data.location}`);
+                return;
+            }
 
-        if (cell) cell.textContent = location;
-        if (showModal) showMessageModal(`${ip} 的归属地：${location}`);
+            // 数据库无数据，使用 JSONP 查询（仅限 IPv4 格式）
+            if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return;
+            const callbackName = "jsonp_cb_" + ip.replace(/\./g, "_");
+            window[callbackName] = function(d) {
+                let location = "未找到";
+                if (d && d.data && d.data[0] && d.data[0].location) {
+                    location = d.data[0].location;
+                    ipLocationCache[ip] = location;
 
-        delete window[callbackName];
-    };
+                    // 将结果写入数据库
+                    fetch('manage.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ save_ip_location: 1, ip, location })
+                    });
+                }
 
-    const script = document.createElement("script");
-    script.src = `http://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
-    document.body.appendChild(script);
+                if (cell) cell.textContent = location;
+                if (showModal) showMessageModal(`${ip} 的归属地：${location}`);
+
+                delete window[callbackName];
+            };
+
+            const script = document.createElement("script");
+            script.src = `http://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
+            document.body.appendChild(script);
+        });
 }
 
 function filterLogByIp(ip) {
@@ -794,6 +831,9 @@ function filterLogByIp(ip) {
                 showMessageModal(`查询失败：${data.message || '未知错误'}`);
                 return;
             }
+
+            // 如果数据库有归属地，更新内存缓存
+            if (data.location) ipLocationCache[ip] = data.location;
             
             let content = '';
             if (data.logs && data.logs.length > 0) {
@@ -801,9 +841,10 @@ function filterLogByIp(ip) {
             } else {
                 content = `无记录：${ip}`;
             }
-            
+
+            const locationInfo = data.location ? ` (${data.location})` : '';
             showMessageModal(`
-                <div style="text-align:left; margin-bottom:10px;">IP: ${ip} - 共 ${data.count} 条记录</div>
+                <div style="text-align:left; margin-bottom:10px;">IP: ${ip}${locationInfo} - 共 ${data.count} 条记录</div>
                 <div id="filteredLog" style="width:1000px; height:504px; overflow:auto; font-family:monospace; white-space:pre;">${content}</div>
             `);
             const d = document.getElementById("filteredLog");
