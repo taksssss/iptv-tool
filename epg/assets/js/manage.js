@@ -772,7 +772,7 @@ function renderTableRow({ ip, counts, total, deny }) {
 function queryIpLocation(ip, showModal = false) {
     const cell = document.getElementById(`loc-${ip}`);
 
-    // 如果有内存缓存
+    // 如果有内存缓存（数据库已知归属地在页面加载时即写入缓存，无需再查库）
     if (ipLocationCache[ip]) {
         if (cell) cell.textContent = ipLocationCache[ip];
         if (showModal) showMessageModal(`${ip} 的归属地：${ipLocationCache[ip]}`);
@@ -782,44 +782,32 @@ function queryIpLocation(ip, showModal = false) {
     if (cell) cell.textContent = "查询中...";
     if (showModal) showMessageModal(`正在查询 ${ip} 的归属地，请稍候...`);
 
-    // 优先从数据库读取
-    fetch(`manage.php?get_ip_location=1&ip=${encodeURIComponent(ip)}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success && data.location) {
-                ipLocationCache[ip] = data.location;
-                if (cell) cell.textContent = data.location;
-                if (showModal) showMessageModal(`${ip} 的归属地：${data.location}`);
-                return;
-            }
+    // 缓存中无数据，使用 JSONP 查询（仅限 IPv4 格式）
+    if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return;
+    const callbackName = "jsonp_cb_" + ip.replace(/\./g, "_");
+    window[callbackName] = function(d) {
+        let location = "未找到";
+        if (d && d.data && d.data[0] && d.data[0].location) {
+            location = d.data[0].location;
+            ipLocationCache[ip] = location;
 
-            // 数据库无数据，使用 JSONP 查询（仅限 IPv4 格式）
-            if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return;
-            const callbackName = "jsonp_cb_" + ip.replace(/\./g, "_");
-            window[callbackName] = function(d) {
-                let location = "未找到";
-                if (d && d.data && d.data[0] && d.data[0].location) {
-                    location = d.data[0].location;
-                    ipLocationCache[ip] = location;
+            // 将结果写入数据库
+            fetch('manage.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ save_ip_location: 1, ip, location })
+            });
+        }
 
-                    // 将结果写入数据库
-                    fetch('manage.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ save_ip_location: 1, ip, location })
-                    });
-                }
+        if (cell) cell.textContent = location;
+        if (showModal) showMessageModal(`${ip} 的归属地：${location}`);
 
-                if (cell) cell.textContent = location;
-                if (showModal) showMessageModal(`${ip} 的归属地：${location}`);
+        delete window[callbackName];
+    };
 
-                delete window[callbackName];
-            };
-
-            const script = document.createElement("script");
-            script.src = `http://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
-            document.body.appendChild(script);
-        });
+    const script = document.createElement("script");
+    script.src = `http://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${ip}&cb=${callbackName}`;
+    document.body.appendChild(script);
 }
 
 function filterLogByIp(ip) {
