@@ -89,6 +89,7 @@
             <div class="form-grid-item" id="task-interval" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? 'display:none' : '' ?>">
                 <label for="interval_hour">（间隔周期）</label>
                 <div class="interval-controls">
+
                     <select id="interval_hour" name="interval_hour" required>
                         <?php for ($h = 0; $h < 24; $h++): ?>
                             <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
@@ -106,6 +107,12 @@
                     </select>
                     <span>分钟</span>
                 </div>
+            </div>
+
+            <div class="form-grid-item" id="task-cron" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? '' : 'display:none' ?>">
+                <label for="cron_expressions">（Cron 表达式）</label>
+                <input type="text" id="cron_expressions" name="cron_expressions" value="<?= htmlspecialchars($Config['cron_expressions'] ?? ''); ?>" placeholder="如: 0 6 * * * | 0 18 * * *" oninput="validateCronExpressions(this)">
+                <span id="cron_expressions_error" style="color:red; font-size:11px; white-space:nowrap;"></span>
             </div>
         </div><br>
         
@@ -851,13 +858,8 @@
                     <option value="1" <?php if (($Config['cron_task_type'] ?? 0) == 1) echo 'selected'; ?>>cron</option>
                 </select>
             </div>
-            <div class="column" id="cron_expressions_column" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? '' : 'display:none' ?>">
-                <label for="cron_expressions">Cron 表达式：</label>
-                <textarea id="cron_expressions" name="cron_expressions" placeholder="每行一个，如：0 6 * * *" style="height:60px; white-space:pre; resize:vertical;" oninput="validateCronExpressions(this)"><?= htmlspecialchars($Config['cron_expressions'] ?? ''); ?></textarea>
-            </div>
-            <div class="column" id="cron_error_column" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? '' : 'display:none' ?>">
-                <span id="cron_expressions_error" style="color:red; font-size:12px;"></span>
-            </div>
+            <div class="column"></div>
+            <div class="column"></div>
         </div>
 
         <!-- 其他设置 -->

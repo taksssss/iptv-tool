@@ -64,7 +64,7 @@ document.getElementById('settingsForm').addEventListener('submit', function(even
         if (cron_task_type === 1) {
             const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             message += cron_expressions
-                ? `已设置定时任务（cron 模式）<br>Cron 表达式：<br>${cron_expressions.split('\n').filter(s => s.trim()).map(s => '&nbsp;&nbsp;' + escapeHtml(s)).join('<br>')}`
+                ? `已设置定时任务（cron 模式）<br>Cron 表达式：<br>${cron_expressions.split('|').filter(s => s.trim()).map(s => '&nbsp;&nbsp;' + escapeHtml(s.trim())).join('<br>')}`
                 : '已取消定时任务（cron 表达式为空）';
         } else {
             message += interval_time === 0 
@@ -190,10 +190,8 @@ function toggleCronTaskType(value) {
         const el = document.getElementById(id);
         if (el) el.style.display = isCron ? 'none' : '';
     });
-    ['cron_expressions_column', 'cron_error_column'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = isCron ? '' : 'none';
-    });
+    const cronEl = document.getElementById('task-cron');
+    if (cronEl) cronEl.style.display = isCron ? '' : 'none';
 }
 
 // 验证单个 cron 字段
@@ -228,8 +226,8 @@ function validateCronExpression(expr) {
 }
 
 // 验证 cron 表达式输入框内容并显示错误提示
-function validateCronExpressions(textarea) {
-    const exprs = textarea.value.split('\n').map(s => s.trim()).filter(s => s);
+function validateCronExpressions(input) {
+    const exprs = input.value.split('|').map(s => s.trim()).filter(s => s);
     const errorEl = document.getElementById('cron_expressions_error');
     if (exprs.length === 0) {
         if (errorEl) errorEl.textContent = '';
@@ -237,7 +235,7 @@ function validateCronExpressions(textarea) {
     }
     for (const expr of exprs) {
         if (!validateCronExpression(expr)) {
-            const msg = `无效表达式：${expr}`;
+            const msg = `无效：${expr}`;
             if (errorEl) errorEl.textContent = msg;
             return msg;
         }

@@ -99,7 +99,7 @@ $cron_exprs_str = $Config['cron_expressions'] ?? '';
 
 if ($cron_task_type === 1) {
     // === cron 模式 ===
-    $cron_exprs = array_values(array_filter(array_map('trim', explode("\n", $cron_exprs_str))));
+    $cron_exprs = array_values(array_filter(array_map('trim', explode('|', $cron_exprs_str))));
     if (empty($cron_exprs)) {
         logCronMessage("【取消定时任务】cron 模式：cron 表达式为空。");
         exit;
