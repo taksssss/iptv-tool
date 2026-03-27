@@ -16,7 +16,9 @@ initialDB();
 session_start();
 
 // 首次进入界面，检查 cron.php 是否运行正常
-if ($Config['interval_time'] !== 0) {
+$cronTaskType = $Config['cron_task_type'] ?? 0;
+$cronEnabled = ($Config['interval_time'] !== 0) || ($cronTaskType === 1 && !empty($Config['cron_expressions']));
+if ($cronEnabled) {
     $output = [];
     exec("ps aux | grep '[c]ron.php'", $output);
     if(!$output) {
@@ -165,7 +167,9 @@ function updateConfigFields() {
     file_put_contents($configPath, json_encode($Config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     // 重新启动 cron.php ，设置新的定时任务
-    if ($oldConfig['start_time'] !== $start_time || $oldConfig['end_time'] !== $end_time || $oldConfig['interval_time'] !== $interval_time) {
+    if ($oldConfig['start_time'] !== $start_time || $oldConfig['end_time'] !== $end_time || $oldConfig['interval_time'] !== $interval_time
+        || ($oldConfig['cron_task_type'] ?? 0) !== ($cron_task_type ?? 0)
+        || ($oldConfig['cron_expressions'] ?? '') !== ($cron_expressions ?? '')) {
         exec('php cron.php > /dev/null 2>/dev/null &');
     }
     
@@ -880,7 +884,9 @@ try {
                     'db_type_set' => $db_type_set,
                     'interval_time' => $Config['interval_time'],
                     'start_time' => $Config['start_time'],
-                    'end_time' => $Config['end_time']
+                    'end_time' => $Config['end_time'],
+                    'cron_task_type' => $Config['cron_task_type'] ?? 0,
+                    'cron_expressions' => $Config['cron_expressions'] ?? ''
                 ]);
                 exit;
 

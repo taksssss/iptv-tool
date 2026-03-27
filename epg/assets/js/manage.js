@@ -23,7 +23,16 @@ document.getElementById('settingsForm').addEventListener('submit', function(even
         'live_template_enable', 'live_fuzzy_match', 'live_url_comment', 'live_tvg_logo_enable', 'live_tvg_id_enable', 
         'live_tvg_name_enable', 'live_source_auto_sync', 'live_channel_name_process', 'gen_live_update_time', 'm3u_icon_first', 
         'ku9_secondary_grouping', 'tag_gen_mode', 'check_speed_filter', 'min_resolution_width', 'min_resolution_height', 'urls_limit', 
-        'sort_by_delay', 'check_speed_auto_sync', 'check_speed_interval_factor'];
+        'sort_by_delay', 'check_speed_auto_sync', 'check_speed_interval_factor', 'cron_task_type', 'cron_expressions'];
+
+    // 验证 cron 模式下的表达式
+    if (document.getElementById('cron_task_type').value === '1') {
+        const cronError = validateCronExpressions(document.getElementById('cron_expressions'));
+        if (cronError) {
+            showMessageModal('Cron 表达式无效：' + cronError);
+            return;
+        }
+    }
 
     // 创建隐藏字段并将其添加到表单
     const form = this;
@@ -45,16 +54,23 @@ document.getElementById('settingsForm').addEventListener('submit', function(even
     })
     .then(response => response.json())
     .then(data => {
-        const { db_type_set, interval_time, start_time, end_time } = data;
+        const { db_type_set, interval_time, start_time, end_time, cron_task_type, cron_expressions } = data;
         
         let message = '配置已更新<br><br>';
         if (!db_type_set) {
             message += '<span style="color:red">MySQL 启用失败<br>数据库已设为 SQLite</span><br><br>';
             document.getElementById('db_type').value = 'sqlite';
         }
-        message += interval_time === 0 
-            ? "已取消定时任务" 
-            : `已设置定时任务<br>开始时间：${start_time}<br>结束时间：${end_time}<br>间隔周期：${formatTime(interval_time)}`;
+        if (cron_task_type === 1) {
+            const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            message += cron_expressions
+                ? `已设置定时任务（cron 模式）<br>Cron 表达式：<br>${cron_expressions.split('\n').filter(s => s.trim()).map(s => '&nbsp;&nbsp;' + escapeHtml(s)).join('<br>')}`
+                : '已取消定时任务（cron 表达式为空）';
+        } else {
+            message += interval_time === 0 
+                ? "已取消定时任务" 
+                : `已设置定时任务<br>开始时间：${start_time}<br>结束时间：${end_time}<br>间隔周期：${formatTime(interval_time)}`;
+        }
     
         showMessageModal(message);
     })
@@ -165,6 +181,69 @@ function formatTime(seconds) {
     const formattedHours = String(Math.floor(seconds / 3600));
     const formattedMinutes = String(Math.floor((seconds % 3600) / 60));
     return `${formattedHours}小时${formattedMinutes}分钟`;
+}
+
+// 切换定时任务类型（默认/cron）
+function toggleCronTaskType(value) {
+    const isCron = value === '1';
+    ['task-start-time', 'task-end-time', 'task-interval'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isCron ? 'none' : '';
+    });
+    ['cron_expressions_column', 'cron_error_column'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isCron ? '' : 'none';
+    });
+}
+
+// 验证单个 cron 字段
+function validateCronField(field, min, max) {
+    if (field === '*') return true;
+    return field.split(',').every(part => {
+        const slashIdx = part.indexOf('/');
+        let step = 1;
+        if (slashIdx !== -1) {
+            step = parseInt(part.slice(slashIdx + 1));
+            if (isNaN(step) || step < 1) return false;
+            part = part.slice(0, slashIdx);
+        }
+        if (part === '*') return true;
+        const dashIdx = part.indexOf('-');
+        if (dashIdx !== -1) {
+            const a = parseInt(part.slice(0, dashIdx));
+            const b = parseInt(part.slice(dashIdx + 1));
+            return !isNaN(a) && !isNaN(b) && a >= min && b <= max && a <= b;
+        }
+        const num = parseInt(part);
+        return !isNaN(num) && num >= min && num <= max;
+    });
+}
+
+// 验证单条 cron 表达式（分 时 日 月 周）
+function validateCronExpression(expr) {
+    const parts = expr.trim().split(/\s+/);
+    if (parts.length !== 5) return false;
+    const ranges = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]];
+    return parts.every((part, i) => validateCronField(part, ranges[i][0], ranges[i][1]));
+}
+
+// 验证 cron 表达式输入框内容并显示错误提示
+function validateCronExpressions(textarea) {
+    const exprs = textarea.value.split('\n').map(s => s.trim()).filter(s => s);
+    const errorEl = document.getElementById('cron_expressions_error');
+    if (exprs.length === 0) {
+        if (errorEl) errorEl.textContent = '';
+        return null;
+    }
+    for (const expr of exprs) {
+        if (!validateCronExpression(expr)) {
+            const msg = `无效表达式：${expr}`;
+            if (errorEl) errorEl.textContent = msg;
+            return msg;
+        }
+    }
+    if (errorEl) errorEl.textContent = '';
+    return null;
 }
 
 // 统一模态框打开函数

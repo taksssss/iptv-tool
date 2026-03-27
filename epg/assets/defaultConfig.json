@@ -16,6 +16,8 @@
     "cached_type": "memcached",
     "gen_list_enable": 0,
     "interval_time": 21600,
+    "cron_task_type": 0,
+    "cron_expressions": "",
     "mysql": {
         "host": "mysql",
         "dbname": "phpepg",

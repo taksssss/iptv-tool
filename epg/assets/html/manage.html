@@ -76,17 +76,17 @@
                 <label id="interval-task-label">【定时任务】</label>
             </div>
             
-            <div class="form-grid-item">
+            <div class="form-grid-item" id="task-start-time" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? 'display:none' : '' ?>">
                 <label for="start_time">（开始时间）</label>
                 <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
             </div>
         
-            <div class="form-grid-item">
+            <div class="form-grid-item" id="task-end-time" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? 'display:none' : '' ?>">
                 <label for="end_time">（结束时间）</label>
                 <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
             </div>
         
-            <div class="form-grid-item">
+            <div class="form-grid-item" id="task-interval" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? 'display:none' : '' ?>">
                 <label for="interval_hour">（间隔周期）</label>
                 <div class="interval-controls">
                     <select id="interval_hour" name="interval_hour" required>
@@ -839,6 +839,24 @@
                 <a href="assets/tinyfilemanager/index.php?p=data&edit=customSource.php&env=ace" target="_blank" class="blue-span">
                     编辑自定义数据源
                 </a>
+            </div>
+        </div>
+
+        <!-- 第六行 -->
+        <div class="row">
+            <div class="column">
+                <label for="cron_task_type">定时任务：</label>
+                <select id="cron_task_type" name="cron_task_type" required onchange="toggleCronTaskType(this.value)">
+                    <option value="0" <?php if (($Config['cron_task_type'] ?? 0) == 0) echo 'selected'; ?>>默认</option>
+                    <option value="1" <?php if (($Config['cron_task_type'] ?? 0) == 1) echo 'selected'; ?>>cron</option>
+                </select>
+            </div>
+            <div class="column" id="cron_expressions_column" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? '' : 'display:none' ?>">
+                <label for="cron_expressions">Cron 表达式：</label>
+                <textarea id="cron_expressions" name="cron_expressions" placeholder="每行一个，如：0 6 * * *" style="height:60px; white-space:pre; resize:vertical;" oninput="validateCronExpressions(this)"><?= htmlspecialchars($Config['cron_expressions'] ?? ''); ?></textarea>
+            </div>
+            <div class="column" id="cron_error_column" style="<?= ($Config['cron_task_type'] ?? 0) == 1 ? '' : 'display:none' ?>">
+                <span id="cron_expressions_error" style="color:red; font-size:12px;"></span>
             </div>
         </div>
 

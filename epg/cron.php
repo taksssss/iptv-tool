@@ -27,6 +27,54 @@ function logCronMessage($message) {
     }
 }
 
+// cron 字段匹配（支持 *、数字、范围、步长、列表）
+function matchCronField($field, $value, $min, $max) {
+    if ($field === '*') return true;
+    foreach (explode(',', $field) as $part) {
+        $part = trim($part);
+        $step = 1;
+        if (strpos($part, '/') !== false) {
+            [$range, $stepStr] = explode('/', $part, 2);
+            $step = max(1, intval($stepStr));
+            $part = $range;
+        }
+        if ($part === '*') {
+            for ($v = $min; $v <= $max; $v += $step) {
+                if ($v === $value) return true;
+            }
+            continue;
+        }
+        if (strpos($part, '-') !== false) {
+            [$from, $to] = explode('-', $part, 2);
+            for ($v = intval($from); $v <= intval($to); $v += $step) {
+                if ($v === $value) return true;
+            }
+            continue;
+        }
+        $num = intval($part);
+        if ($step === 1) {
+            if ($num === $value) return true;
+            continue;
+        }
+        for ($v = $num; $v <= $max; $v += $step) {
+            if ($v === $value) return true;
+        }
+    }
+    return false;
+}
+
+// cron 表达式匹配（5字段：分 时 日 月 周）
+function matchCronExpression($expr, $min, $hour, $dom, $mon, $dow) {
+    $parts = preg_split('/\s+/', trim($expr));
+    if (count($parts) !== 5) return false;
+    [$mF, $hF, $domF, $monF, $dowF] = $parts;
+    return matchCronField($mF, $min, 0, 59) &&
+           matchCronField($hF, $hour, 0, 23) &&
+           matchCronField($domF, $dom, 1, 31) &&
+           matchCronField($monF, $mon, 1, 12) &&
+           matchCronField($dowF, $dow % 7, 0, 6);
+}
+
 // 防止多进程同时运行
 $currentPid = posix_getpid();
 $processName = 'cron.php';
@@ -43,9 +91,55 @@ foreach ($oldPids as $pid) {
 }
 
 // 加载配置
-$interval_time = $Config['interval_time'] ?? 0;
-$start_time    = $Config['start_time'] ?? null;
-$end_time      = $Config['end_time'] ?? null;
+$interval_time  = $Config['interval_time'] ?? 0;
+$start_time     = $Config['start_time'] ?? null;
+$end_time       = $Config['end_time'] ?? null;
+$cron_task_type = $Config['cron_task_type'] ?? 0;
+$cron_exprs_str = $Config['cron_expressions'] ?? '';
+
+if ($cron_task_type === 1) {
+    // === cron 模式 ===
+    $cron_exprs = array_values(array_filter(array_map('trim', explode("\n", $cron_exprs_str))));
+    if (empty($cron_exprs)) {
+        logCronMessage("【取消定时任务】cron 模式：cron 表达式为空。");
+        exit;
+    }
+
+    $logContent = "【cron 模式】\n\t\t\t\t-------cron 表达式-------\n";
+    foreach ($cron_exprs as $expr) $logContent .= "\t\t\t\t\t      " . $expr . "\n";
+    $logContent .= "\t\t\t\t--------------------------";
+    logCronMessage($logContent);
+
+    $check_counter = 0;
+    while (true) {
+        $now_min  = intval(date('i'));
+        $now_hour = intval(date('G'));
+        $now_dom  = intval(date('j'));
+        $now_mon  = intval(date('n'));
+        $now_dow  = intval(date('w')); // 0=Sunday
+
+        foreach ($cron_exprs as $expr) {
+            if (matchCronExpression($expr, $now_min, $now_hour, $now_dom, $now_mon, $now_dow)) {
+                exec('php ' . __DIR__ . '/update.php &');
+                logCronMessage("【成功执行】 update.php (" . ++$check_counter . ") [cron: $expr]");
+
+                // 同步测速校验
+                $Config = json_decode(@file_get_contents(__DIR__ . '/data/config.json'), true);
+                $check_interval_factor = $Config['check_speed_interval_factor'] ?? 1;
+                if (($Config['check_speed_auto_sync'] ?? false) && ($check_counter % $check_interval_factor === 0)) {
+                    exec('php ' . __DIR__ . '/check.php backgroundMode=1 > /dev/null 2>/dev/null &');
+                    logCronMessage("【测速校验】 已在后台运行 (" . ($check_counter / $check_interval_factor) . ")");
+                }
+
+                break; // 防止同一分钟多个表达式重复执行
+            }
+        }
+
+        sleep(60 - date('s')); // 每分钟整点检查
+    }
+}
+
+// === 默认模式 ===
 if ($interval_time == 0 || !$start_time || !$end_time) {
     logCronMessage("【取消定时任务】配置不完整或间隔时间为0。");
     exit;
