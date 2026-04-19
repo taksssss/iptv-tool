@@ -186,7 +186,7 @@ try {
             'get_live_data', 'parse_source_info', 'download_source_data', 'delete_unused_icons',
             'delete_source_config', 'delete_unused_live_data', 'get_version_log', 'get_readme_content',
             'get_access_log', 'download_access_log', 'get_access_stats', 'clear_access_log', 'filter_access_log_by_ip',
-            'get_ip_list', 'test_redis'
+            'get_ip_list', 'test_redis', 'get_ip_location'
         ];
         $action = key(array_intersect_key($_GET, array_flip($action_map))) ?: '';
 
@@ -666,14 +666,28 @@ try {
                     $dbResponse = ['success' => true, 'changed' => false, 'logs' => [], 'has_more' => false];
                     break;
                 }
+
+                // 一次性从 ip_location 表取出所有涉及 IP 的归属地
+                $uniqueIps = array_unique(array_column($rows, 'client_ip'));
+                $locations = [];
+                if (!empty($uniqueIps)) {
+                    $placeholders = implode(',', array_fill(0, count($uniqueIps), '?'));
+                    $stmt = $db->prepare("SELECT ip, location FROM ip_location WHERE ip IN ($placeholders)");
+                    $stmt->execute(array_values($uniqueIps));
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                        $locations[$lr['ip']] = $lr['location'];
+                    }
+                }
             
                 $logs = [];
                 $minId = PHP_INT_MAX;
                 $maxId = 0;
                 foreach ($rows as $row) {
+                    $ip = $row['client_ip'];
+                    $locationPart = isset($locations[$ip]) ? "[{$locations[$ip]}] " : '';
                     $logs[] = [
                         'id' => (int)$row['id'],
-                        'text' => "[{$row['access_time']}] [{$row['client_ip']}] "
+                        'text' => "[{$row['access_time']}] [{$ip}] {$locationPart}"
                             . ($row['access_denied'] ? "{$row['deny_message']} " : '')
                             . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
                     ];
@@ -695,7 +709,8 @@ try {
                     'logs' => $logs, 
                     'min_id' => $minId < PHP_INT_MAX ? $minId : 0,
                     'max_id' => $maxId,
-                    'has_more' => $hasMore
+                    'has_more' => $hasMore,
+                    'locations' => $locations
                 ];
                 break;
 
@@ -738,10 +753,16 @@ try {
                             . "[{$row['method']}] {$row['url']} | UA: {$row['user_agent']}"
                     ];
                 }
+
+                // 从 ip_location 表获取该 IP 的归属地
+                $locStmt = $db->prepare("SELECT location FROM ip_location WHERE ip = ?");
+                $locStmt->execute([$ip]);
+                $locRow = $locStmt->fetch(PDO::FETCH_ASSOC);
                 
                 $dbResponse = [
                     'success' => true,
                     'ip' => $ip,
+                    'location' => $locRow ? $locRow['location'] : null,
                     'logs' => $logs,
                     'count' => count($logs)
                 ];
@@ -791,13 +812,27 @@ try {
                     $row['counts'] = $counts;
                 }
                 unset($row);
+
+                // 从 ip_location 表获取已知归属地
+                $ips = array_keys($ipData);
+                if (!empty($ips)) {
+                    $placeholders = implode(',', array_fill(0, count($ips), '?'));
+                    $stmt = $db->prepare("SELECT ip, location FROM ip_location WHERE ip IN ($placeholders)");
+                    $stmt->execute($ips);
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lr) {
+                        if (isset($ipData[$lr['ip']])) {
+                            $ipData[$lr['ip']]['location'] = $lr['location'];
+                        }
+                    }
+                }
                 
                 $dbResponse = ['success' => true, 'ipData' => array_values($ipData), 'dates' => $dates];
                 break;
                 
             case 'clear_access_log':
-                $res = $db->exec("DELETE FROM access_log") !== false;
-                $dbResponse = ['success' => $res];
+                $res1 = $db->exec("DELETE FROM access_log") !== false;
+                $res2 = $db->exec("DELETE FROM ip_location") !== false;
+                $dbResponse = ['success' => ($res1 && $res2)];
                 break;
 
             case 'get_ip_list':
@@ -810,6 +845,18 @@ try {
                 } else {
                     $dbResponse = ['success' => true, 'list' => []];
                 }
+                break;
+
+            case 'get_ip_location':
+                $ip = isset($_GET['ip']) ? $_GET['ip'] : '';
+                if (empty($ip)) {
+                    $dbResponse = ['success' => false, 'message' => 'IP地址不能为空'];
+                    break;
+                }
+                $stmt = $db->prepare("SELECT location FROM ip_location WHERE ip = ?");
+                $stmt->execute([$ip]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $dbResponse = ['success' => true, 'location' => $row ? $row['location'] : null];
                 break;
 
             case 'test_redis':
@@ -864,6 +911,7 @@ try {
             'save_source_info' => isset($_POST['save_source_info']),
             'update_config_field' => isset($_POST['update_config_field']),
             'create_source_config' => isset($_POST['create_source_config']),
+            'save_ip_location' => isset($_POST['save_ip_location']),
         ];
 
         // 确定操作类型
@@ -1190,7 +1238,23 @@ try {
                 }
                 $Config['live_source_config'] = $new;
                 file_put_contents($configPath, json_encode($Config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-                exit;            
+                exit;
+
+            case 'save_ip_location':
+                $ip = $_POST['ip'] ?? '';
+                $location = $_POST['location'] ?? '';
+                if (empty($ip) || empty($location)) {
+                    echo json_encode(['success' => false]);
+                    exit;
+                }
+                if ($is_sqlite) {
+                    $stmt = $db->prepare("INSERT OR REPLACE INTO ip_location (ip, location, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)");
+                } else {
+                    $stmt = $db->prepare("INSERT INTO ip_location (ip, location, updated_at) VALUES (?, ?, NOW()) AS new ON DUPLICATE KEY UPDATE location = new.location, updated_at = new.updated_at");
+                }
+                $stmt->execute([$ip, $location]);
+                echo json_encode(['success' => true]);
+                exit;
         }
     }
 } catch (Exception $e) {
