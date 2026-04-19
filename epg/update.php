@@ -272,6 +272,71 @@ function downloadXmlData($xml_url, $userAgent, $db, &$log_messages, $gen_list, $
     echo "<br>";
 }
 
+// 辅助函数：检测并填补时间空洞
+function fillTimeGaps(&$channelProgrammes) {
+    foreach ($channelProgrammes as &$channelData) {
+        if (!isset($channelData['diyp_data'])) continue;
+        
+        foreach ($channelData['diyp_data'] as $date => &$programs) {
+            // 首先按开始时间排序，防止XML数据源不按时间顺序列出
+            usort($programs, function($a, $b) {
+                return strcmp($a['start'], $b['start']);
+            });
+            
+            $filled = [];
+            $lastEnd = '00:00';
+            $isFirst = true;
+
+            foreach ($programs as $p) {
+                $start = $p['start'];
+                $end = $p['end'];
+
+                if ($isFirst) {
+                    if ($start > '00:00') {
+                        // 第一档节目前有空洞
+                        $filled[] = [
+                            'start' => '00:00',
+                            'end' => $start,
+                            'title' => '精彩节目',
+                            'desc' => ''
+                        ];
+                    }
+                    $isFirst = false;
+                } else {
+                    if ($lastEnd !== '00:00' && $start > $lastEnd) {
+                        // 两档节目之间有空洞
+                        $filled[] = [
+                            'start' => $lastEnd,
+                            'end' => $start,
+                            'title' => '精彩节目',
+                            'desc' => ''
+                        ];
+                    }
+                }
+
+                $filled[] = $p;
+
+                // 记录当前的结束时间 (应对跨天 00:00 及正常结束时间)
+                if ($end === '00:00' || ($lastEnd !== '00:00' && $end > $lastEnd)) {
+                    $lastEnd = $end;
+                }
+            }
+
+            // 补充当天的尾部空洞直到 00:00
+            if ($lastEnd !== '00:00') {
+                $filled[] = [
+                    'start' => $lastEnd,
+                    'end' => '00:00',
+                    'title' => '精彩节目',
+                    'desc' => ''
+                ];
+            }
+            
+            $programs = $filled;
+        }
+    }
+}
+
 // 处理 XML 数据并逐步存入数据库
 function processXmlData($xml_url, $xml_data, $db, $gen_list, $white_list, $black_list, $time_offset, $bindPattern) {
     global $Config, $processedRecords, $channel_bind_epg, $thresholdDate;
@@ -390,6 +455,12 @@ function processXmlData($xml_url, $xml_data, $db, $gen_list, $white_list, $black
             // 每次达到 50 时，插入数据并保留最后一条
             if (count($currentChannelProgrammes) >= 50) {
                 $lastProgramme = array_pop($currentChannelProgrammes); // 取出最后一条
+                
+                // 填补时间空洞
+                if ($Config['ret_default'] ?? true) {
+                    fillTimeGaps($currentChannelProgrammes);
+                }
+
                 $skipCount += insertDataToDatabase($currentChannelProgrammes, $db, $xml_url); // 插入前 49 条
                 $currentChannelProgrammes = [$channelId => $lastProgramme]; // 清空并重新赋值最后一条
             }
@@ -402,6 +473,10 @@ function processXmlData($xml_url, $xml_data, $db, $gen_list, $white_list, $black
     
     // 插入剩余的数据
     if ($currentChannelProgrammes) {
+        // 填补时间空洞
+        if ($Config['ret_default'] ?? true) {
+            fillTimeGaps($currentChannelProgrammes);
+        }
         $skipCount += insertDataToDatabase($currentChannelProgrammes, $db, $xml_url);
     }
     
