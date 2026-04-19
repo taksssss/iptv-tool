@@ -63,7 +63,7 @@ function initialDB() {
     global $is_sqlite;
 
     $typeText = $is_sqlite ? 'TEXT' : 'VARCHAR(255)';
-    $typeTextLong = $is_sqlite ? 'TEXT' : 'VARCHAR(1024)';
+    $typeTextLong = 'TEXT';
     $typeIntAuto = $is_sqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'INT PRIMARY KEY AUTO_INCREMENT';
     $typeTime = $is_sqlite ? 'DATETIME DEFAULT CURRENT_TIMESTAMP' : 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP';
 
@@ -117,47 +117,15 @@ function initialDB() {
             user_agent TEXT NOT NULL,
             access_denied INTEGER DEFAULT 0,
             deny_message TEXT
+        )",
+        "CREATE TABLE IF NOT EXISTS ip_location (
+            ip $typeText PRIMARY KEY,
+            location $typeText NOT NULL,
+            updated_at $typeTime
         )"
     ];
 
     foreach ($tables as $sql) $db->exec($sql);
-
-    // channels 表处理
-    $res = $is_sqlite
-        ? $db->query("PRAGMA table_info(channels)")
-        : $db->query("SHOW COLUMNS FROM channels");
-    $cols = $res ? $res->fetchAll(PDO::FETCH_COLUMN, $is_sqlite ? 1 : 0) : [];
-
-    if (!in_array('groupPrefix', $cols)) {
-        // 重建表，保证 groupPrefix 在第一列
-        $db->exec("ALTER TABLE channels RENAME TO channels_old");
-
-        $db->exec("CREATE TABLE channels (
-            groupPrefix $typeText,
-            groupTitle $typeText,
-            channelName $typeText,
-            chsChannelName $typeText,
-            streamUrl $typeTextLong,
-            iconUrl $typeText,
-            tvgId $typeText,
-            tvgName $typeText,
-            disable INTEGER DEFAULT 0,
-            modified INTEGER DEFAULT 0,
-            source $typeText,
-            tag $typeText,
-            config $typeText
-        )");
-
-        // 迁移数据，groupPrefix 默认空
-        $commonCols = array_intersect(
-            ['groupTitle','channelName','chsChannelName','streamUrl',
-             'iconUrl','tvgId','tvgName','disable','modified','source','tag','config'],
-            $cols
-        );
-        $colList = implode(',', $commonCols);
-        $db->exec("INSERT INTO channels (groupPrefix, $colList) SELECT '', $colList FROM channels_old");
-        $db->exec("DROP TABLE channels_old");
-    }
 }
 
 // 获取处理后的频道名：$t2s参数表示是否进行繁转简，默认 false
@@ -839,7 +807,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
                 if (count($parts) >= 2) {
                     if (stripos($parts[1], '#genre#') !== false) {
                         $groupTitle = trim($parts[0]); // 更新 group-title
-                        $groupKu9Opt = trim($parts[2]) ?? '';
+                        $groupKu9Opt = trim($parts[2] ?? '');
                         continue;
                     }
                     
