@@ -506,6 +506,9 @@ function showAccessLogModal() {
             .then(r => r.json())
             .then(d => {
                 if (!d.success) return;
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 let content = '';
                 if (d.logs && d.logs.length > 0) {
@@ -535,6 +538,9 @@ function showAccessLogModal() {
             .then(r => r.json())
             .then(d => {
                 if (!d.success || !d.changed || !d.logs || d.logs.length === 0) return;
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 const pre = document.getElementById('accessLogPre');
                 if (!pre) return;
@@ -574,6 +580,9 @@ function showAccessLogModal() {
                     isLoadingOlderLogs = false;
                     return;
                 }
+
+                // 将数据库中已知的归属地写入内存缓存
+                if (d.locations) Object.assign(ipLocationCache, d.locations);
                 
                 const pre = document.getElementById('accessLogPre');
                 if (!pre) return;
@@ -629,9 +638,13 @@ function formatLogLine(text) {
     const ipRegex = /\[(\d{1,3}(?:\.\d{1,3}){3})\]/g;
 
     // 替换 IP 为可点击链接
-    let result = text.replace(ipRegex, (match, ip) => {
-        return `[<a href="#" onclick="queryIpLocation('${ip}', true); return false;">${ip}</a>]`;
-    });
+    const bracketCount = (text.match(/\[/g) || []).length;
+    let result = text;
+    if (bracketCount <= 3) {
+        result = text.replace(ipRegex, (match, ip) => {
+            return `[<a href="#" onclick="queryIpLocation('${ip}', true); return false;">${ip}</a>]`;
+        });
+    }
 
     // 如果包含「访问被拒绝」，整行加粗+标红
     if (text.includes('访问被拒绝')) {
@@ -680,6 +693,10 @@ function loadAccessStats() {
         .then(res => res.json())
         .then(d => {
             if (!d.success) return;
+            // 将数据库中已知的归属地写入内存缓存
+            (d.ipData || []).forEach(row => {
+                if (row.location) ipLocationCache[row.ip] = row.location;
+            });
             cachedData = { ipData: d.ipData, dates: d.dates };
             renderAccessStatsTable();
         });
@@ -738,10 +755,13 @@ function renderTableHeader(dates) {
 
 function renderTableRow({ ip, counts, total, deny }) {
     const countCells = counts.map(c => `<td>${c}</td>`).join('');
+    const locationCell = ipLocationCache[ip]
+        ? `<span>${ipLocationCache[ip]}</span>`
+        : `<a href="#" onclick="queryIpLocation('${ip}'); return false;">点击查询</a>`;
     return `
         <tr>
             <td><a href="#" onclick="filterLogByIp('${ip}'); return false;">${ip}</a></td>
-            <td id="loc-${ip}"><a href="#" onclick="queryIpLocation('${ip}'); return false;">点击查询</a></td>
+            <td id="loc-${ip}">${locationCell}</td>
             ${countCells}
             <td>${deny}</td>
             <td>${total}</td>
@@ -756,26 +776,36 @@ function renderTableRow({ ip, counts, total, deny }) {
 function queryIpLocation(ip, showModal = false) {
     const cell = document.getElementById(`loc-${ip}`);
 
-    // 如果有缓存
-    if (ipLocationCache[ip]) {
-        if (cell) cell.textContent = ipLocationCache[ip];
-        if (showModal) showMessageModal(`${ip} 的归属地：${ipLocationCache[ip]}`);
-        return;
-    }
-
     if (cell) cell.textContent = "查询中...";
     if (showModal) showMessageModal(`正在查询 ${ip} 的归属地，请稍候...`);
 
+    // 使用 JSONP 查询（仅限 IPv4 格式）
+    if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) return;
     const callbackName = "jsonp_cb_" + ip.replace(/\./g, "_");
     window[callbackName] = function(d) {
         let location = "未找到";
         if (d && d.data && d.data[0] && d.data[0].location) {
             location = d.data[0].location;
             ipLocationCache[ip] = location;
+
+            // 将结果写入数据库
+            fetch('manage.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ save_ip_location: 1, ip, location })
+            });
         }
 
         if (cell) cell.textContent = location;
-        if (showModal) showMessageModal(`${ip} 的归属地：${location}`);
+        if (showModal) {
+            showMessageModal(`${ip} 的归属地：${location}`);
+        
+            const pre = document.getElementById('accessLogPre');
+            if (pre) {
+                const pattern = new RegExp(`\\[<a[^>]*>${ip}<\\/a>\\]`, 'g');
+                pre.innerHTML = pre.innerHTML.replace(pattern, `[${ip}] [${location}]`);
+            }
+        }
 
         delete window[callbackName];
     };
@@ -794,6 +824,9 @@ function filterLogByIp(ip) {
                 showMessageModal(`查询失败：${data.message || '未知错误'}`);
                 return;
             }
+
+            // 如果数据库有归属地，更新内存缓存
+            if (data.location) ipLocationCache[ip] = data.location;
             
             let content = '';
             if (data.logs && data.logs.length > 0) {
@@ -801,9 +834,10 @@ function filterLogByIp(ip) {
             } else {
                 content = `无记录：${ip}`;
             }
-            
+
+            const locationInfo = data.location ? ` (${data.location})` : '';
             showMessageModal(`
-                <div style="text-align:left; margin-bottom:10px;">IP: ${ip} - 共 ${data.count} 条记录</div>
+                <div style="text-align:left; margin-bottom:10px;">IP: ${ip}${locationInfo} - 共 ${data.count} 条记录</div>
                 <div id="filteredLog" style="width:1000px; height:504px; overflow:auto; font-family:monospace; white-space:pre;">${content}</div>
             `);
             const d = document.getElementById("filteredLog");
@@ -854,13 +888,14 @@ function sortByColumn(col) {
 
 // 清空访问日志
 function clearAccessLog() {
-    if (!confirm('确定清空访问日志？')) return;
+    if (!confirm('确定清空访问日志及 IP 归属地数据？')) return;
     fetch('manage.php?clear_access_log=1')
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                alert('日志已清空');
+                alert('数据已清空');
                 document.getElementById('accessLogContent').innerHTML = '';
+                ipLocationCache = {};
             } else alert('清空失败');
         }).catch(() => alert('请求失败'));
 }
@@ -1575,8 +1610,6 @@ function openLiveSourceConfigDialog(isNew = 0) {
         .catch(error => {
             showMessageModal('保存过程中出现错误: ' + error);
         });
-
-        document.getElementById('showLiveUrlBtn').click();
     };
 }
 
@@ -1636,8 +1669,8 @@ function cleanUnusedSource() {
     });
 }
 
-// 显示直播源地址
-async function showLiveUrl() {
+// 显示 EPG、直播源地址
+async function showUrl() {
     try {
         // 并行获取 serverUrl 和 config
         const [serverRes, configRes] = await Promise.all([
@@ -1653,13 +1686,11 @@ async function showLiveUrl() {
         const tokenMd5   = configData.token_md5;
         const tokenRange = parseInt(configData.token_range, 10);
         const rewriteEnable = serverData.rewrite_enable ? true : false;
-
-        // live_source_config 仍从页面 select/input 获取
-        const liveSourceElem = document.getElementById('live_source_config');
-        const configValue = liveSourceElem ? liveSourceElem.value : 'default';
+        const liveSourceElem = configData.live_source_config;
+        const configValue = liveSourceElem || 'default';
 
         const tokenStr = (tokenRange === 1 || tokenRange === 3) ? `token=${token}` : '';
-        const urlParam = (configValue === 'default') ? '' : `url=${configValue}`;
+        const urlParam = (configValue == 'default') ? '' : `url=${configValue}`;
         const query = [tokenStr, urlParam].filter(Boolean).join('&');
 
         const m3uPath = rewriteEnable ? '/tv.m3u' : '/index.php?type=m3u';
@@ -1686,14 +1717,98 @@ async function showLiveUrl() {
         const proxyM3uUrl = buildCustomUrl(m3uUrl, tokenMd5, 'proxy');
         const proxyTxtUrl = buildCustomUrl(txtUrl, tokenMd5, 'proxy');
         
-        const message =
-            `访问地址：<br>` +
-            `<a href="${m3uUrl}" target="_blank">${m3uUrl}</a>&ensp;<a href="${m3uUrl}" download="tv.m3u">下载</a><br>` +
-            `<a href="${txtUrl}" target="_blank">${txtUrl}</a>&ensp;<a href="${txtUrl}" download="tv.txt">下载</a><br>` +
-            `代理访问：<br>` +
-            `<a href="${proxyM3uUrl}" target="_blank">${proxyM3uUrl}</a>&ensp;<a href="${proxyM3uUrl}" download="tv.m3u">下载</a><br>` +
-            `<a href="${proxyTxtUrl}" target="_blank">${proxyTxtUrl}</a>&ensp;<a href="${proxyTxtUrl}" download="tv.txt">下载</a>`;
+        const btnBase = `
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            height:22px;
+            width:48px;
+            margin-left:6px;
+            border-radius:4px;
+            font-size:12px;
+            cursor:pointer;
+            text-decoration:none;
+            flex-shrink:0;
+        `;
+
+        const btn = (type, text, extra = '', filename = '') => {
+            const styles = {
+                copy: 'border:none;background:rgba(82,196,26,0.85);color:#fff;',
+                open: 'background:rgba(22,119,255,0.85);color:#fff;',
+                download: 'background:rgba(250,140,16,0.85);color:#fff;'
+            };
         
+            const tag = type === 'copy' ? 'button' : 'a';
+            const attrs =
+                type === 'copy'
+                    ? `data-copy="${encodeURIComponent(extra)}"`
+                    : `href="${extra}" ${type === 'open' ? 'target="_blank"' : ''} ${
+                        type === 'download' ? `download="${filename}"` : ''
+                    }`;
+
+            return `<${tag} class="${type}-btn" ${attrs}
+                style="${btnBase}${styles[type]}">${text}</${tag}>`;
+        };
+
+        const linkBlock = (url, name, opts = {}) => {
+            const { showOpen = true, showDownload = false, filename = '' } = opts;
+
+            return `
+            <div style="margin:6px 0;display:flex;align-items:center;gap:6px;">
+                <span style="flex-shrink:0;">${name}：</span>
+        
+                <div style="flex:1;overflow-x:auto;white-space:nowrap;">
+                    <span style="font-family:monospace;background:rgba(128,128,128,0.12);padding:2px 6px;border-radius:4px;">
+                        ${url}
+                    </span>
+                </div>
+        
+                ${showDownload ? btn('download', '下载', url, filename) : ''}
+                ${showOpen ? btn('open', '打开', url) : ''}
+                ${btn('copy', '复制', url)}
+            </div>`;
+        };
+
+        // 配置驱动
+        const sections = [
+            {
+                title: 'EPG接口',
+                links: [
+                    [ `${serverUrl}/t.xml.gz`, 'xmltv' ],
+                    [ `${serverUrl}/index.php`, 'DIYP/百川、超级直播' ]
+                ]
+            },
+            {
+                title: 'tvbox',
+                links: [
+                    [ `${serverUrl}/index.php?ch={name}&date={date}`, '"epg"', { showOpen: false } ],
+                    [ `${serverUrl}/index.php?ch={name}&type=icon`, '"logo"', { showOpen: false } ]
+                ]
+            },
+            {
+                title: '直播源地址',
+                links: [
+                    [ m3uUrl, 'M3U', { showDownload: true, filename: 'tv.m3u' } ],
+                    [ txtUrl, 'TXT', { showDownload: true, filename: 'tv.txt' } ]
+                ]
+            },
+            {
+                title: '直播源代理',
+                links: [
+                    [ proxyM3uUrl, 'M3U', { showDownload: true, filename: 'tv.m3u' } ],
+                    [ proxyTxtUrl, 'TXT', { showDownload: true, filename: 'tv.txt' } ]
+                ]
+            }
+        ];
+
+        const message = `
+        <div id="copy-container" style="line-height:1.8;font-size:14px;">
+            ${sections.map(sec => `
+                <div style="font-weight:bold;margin:10px 0 4px;">${sec.title}</div>
+                ${sec.links.map(([url, name, opts]) => linkBlock(url, name, opts)).join('')}
+            `).join('')}
+        </div>`;
+
         showMessageModal(message);
 
     } catch (err) {
@@ -1701,6 +1816,24 @@ async function showLiveUrl() {
         showMessageModal('无法获取服务器地址或配置信息，请稍后重试');
     }
 }
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.copy-btn');
+    if (!btn) return;
+
+    const text = decodeURIComponent(btn.getAttribute('data-copy'));
+
+    const input = document.createElement('textarea');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+
+    // 可选：提示
+    btn.innerText = '成功';
+    setTimeout(() => btn.innerText = '复制', 1000);
+});
 
 // 显示直播源模板
 function showLiveTemplate() {
