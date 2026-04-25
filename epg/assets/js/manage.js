@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('settingsForm').addEventListener('submit', function(event) {
     event.preventDefault();  // 阻止默认表单提交
 
-    const fields = ['update_config', 'gen_xml', 'include_future_only', 'ret_default', 'cht_to_chs', 'db_type', 
+    const fields = ['update_config', 'gen_xml', 'include_future_only', 'channel_fuzzy_match', 'ret_default', 'cht_to_chs', 'db_type', 
         'mysql_host', 'mysql_dbname', 'mysql_username', 'mysql_password', 'cached_type', 'gen_list_enable', 'check_update', 
         'token_range', 'user_agent_range', 'notify', 'access_log_enable', 'target_time_zone', 'ip_list_mode', 'live_source_config', 
         'live_template_enable', 'live_fuzzy_match', 'live_url_comment', 'live_tvg_logo_enable', 'live_tvg_id_enable', 
@@ -430,10 +430,34 @@ function updateCronLogContent(logData) {
     logContent.scrollTop = logContent.scrollHeight;
 }
 
-// 关闭繁體转简体时提示
-function chtToChsChanged(selectElem) {
-    if (selectElem.value === '0') {showMessageModal('将不支持繁简频道匹配');}
+// 确认关闭提示
+function confirmSelect(el, msg, trigger = '0') {
+    let prev = el.value;
+    el.onfocus = () => prev = el.value;
+    el.onchange = () => {
+        if (el.value === trigger && !confirm(msg)) {
+            el.value = prev;
+        } else {
+            prev = el.value;
+        }
+    };
 }
+const confirmConfigs = [
+    {
+        id: 'cht_to_chs',
+        message: '关闭后将不支持繁简频道匹配，是否继续？'
+    },
+    {
+        id: 'channel_fuzzy_match',
+        message: '关闭后EPG、台标、直播频道将不进行模糊匹配，是否继续？'
+    }
+];
+confirmConfigs.forEach(({ id, message }) => {
+    const el = document.getElementById(id);
+    if (el) {
+        confirmSelect(el, message);
+    }
+});
 
 // 修改数据库相关信息
 function changeDbType(selectElem) {
@@ -1689,12 +1713,14 @@ async function showUrl() {
         const liveSourceElem = configData.live_source_config;
         const configValue = liveSourceElem || 'default';
 
-        const tokenStr = (tokenRange === 1 || tokenRange === 3) ? `token=${token}` : '';
-        const urlParam = (configValue == 'default') ? '' : `url=${configValue}`;
-        const query = [tokenStr, urlParam].filter(Boolean).join('&');
+        const liveTokenStr = (tokenRange === 1 || tokenRange === 3) ? `token=${token}` : '';
+        const liveUrlParam = (configValue == 'default') ? '' : `url=${configValue}`;
+        const liveQuery = [liveTokenStr, liveUrlParam].filter(Boolean).join('&');
 
         const m3uPath = rewriteEnable ? '/tv.m3u' : '/index.php?type=m3u';
         const txtPath = rewriteEnable ? '/tv.txt' : '/index.php?type=txt';
+        const gzPath = rewriteEnable ? '/t.xml.gz' : '/index.php?type=gz';
+        const epgQuery = (tokenRange === 2 || tokenRange === 3) ? `token=${token}` : '';
 
         function buildUrl(base, path, query) {
             let url = base + path;
@@ -1702,8 +1728,9 @@ async function showUrl() {
             return url;
         }
         
-        const m3uUrl = buildUrl(serverUrl, m3uPath, query);
-        const txtUrl = buildUrl(serverUrl, txtPath, query);
+        const m3uUrl = buildUrl(serverUrl, m3uPath, liveQuery);
+        const txtUrl = buildUrl(serverUrl, txtPath, liveQuery);
+        const gzUrl = buildUrl(serverUrl, gzPath, epgQuery);
         
         function buildCustomUrl(originalUrl, tokenMd5, mode) {
             const url = new URL(originalUrl, location.origin);
@@ -1774,15 +1801,23 @@ async function showUrl() {
             {
                 title: 'EPG接口',
                 links: [
-                    [ `${serverUrl}/t.xml.gz`, 'xmltv' ],
-                    [ `${serverUrl}/index.php`, 'DIYP/百川、超级直播' ]
+                    [ gzUrl, 'xmltv' ],
+                    [ buildUrl(serverUrl, '/index.php', epgQuery), 'DIYP/百川、超级直播' ]
                 ]
             },
             {
                 title: 'tvbox',
                 links: [
-                    [ `${serverUrl}/index.php?ch={name}&date={date}`, '"epg"', { showOpen: false } ],
-                    [ `${serverUrl}/index.php?ch={name}&type=icon`, '"logo"', { showOpen: false } ]
+                    [
+                        buildUrl(serverUrl, '/index.php?ch={name}&date={date}', epgQuery),
+                        '"epg"',
+                        { showOpen: false }
+                    ],
+                    [
+                        buildUrl(serverUrl, '/index.php?ch={name}&type=icon', epgQuery),
+                        '"logo"',
+                        { showOpen: false }
+                    ]
                 ]
             },
             {
