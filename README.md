@@ -118,7 +118,7 @@ docker run -d --name php-epg \
 > `-e ENABLE_HTTPS=true`：启用 HTTPS  
 > `-e FORCE_HTTPS=true`：强制跳转到 HTTPS  
 > `-v /path/to/server.crt:/etc/ssl/certs/server.crt`：挂载证书文件  
-> `-v /path/to/server.key:/etc/ssl/certs/server.key`：挂载私钥文件
+> `-v /path/to/server.key:/etc/ssl/private/server.key`：挂载私钥文件
 
 手动升级
 ```bash
