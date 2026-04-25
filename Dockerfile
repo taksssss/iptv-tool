@@ -11,17 +11,19 @@ RUN apk --no-cache --update \
     curl \
     memcached \
     tzdata \
-    php83-fpm \
-    php83-cli \
     php83-bcmath \
     php83-bz2 \
     php83-calendar \
+    php83-cli \
     php83-common \
     php83-ctype \
     php83-curl \
     php83-dom \
     php83-gd \
+    php83-fpm \
     php83-iconv \
+    php83-intl \
+    php83-json \
     php83-mbstring \
     php83-mysqli \
     php83-mysqlnd \
@@ -29,17 +31,16 @@ RUN apk --no-cache --update \
     php83-pdo_mysql \
     php83-pdo_pgsql \
     php83-pdo_sqlite \
+    php83-pecl-memcached \
+    php83-pecl-redis \
     php83-phar \
     php83-session \
+    php83-simplexml \
     php83-xml \
     php83-xmlreader \
     php83-xmlwriter \
-    php83-simplexml \
-    php83-json \
     php83-posix \
     php83-zip \
-    php83-pecl-memcached \
-    php83-pecl-redis \
     && mkdir -p /htdocs /run/nginx
 
 # 复制 ./epg 文件夹内容到 /htdocs
