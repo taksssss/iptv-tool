@@ -9,6 +9,7 @@ LABEL description="Alpine based image with nginx and php8.3-fpm."
 RUN apk --no-cache --update \
     add nginx \
     curl \
+    icu-data-full \
     memcached \
     tzdata \
     php83-bcmath \
