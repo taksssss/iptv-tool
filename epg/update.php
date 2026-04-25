@@ -75,16 +75,11 @@ function deleteOldData($db, $thresholdDate, &$log_messages) {
     }
     
     // 清理缓存数据
-    $cached_type = $Config['cached_type'] ?? 'memcached';
-    if ($cached_type === 'memcached' && class_exists('Memcached') && ($memcached = new Memcached())->addServer('127.0.0.1', 11211)) {
-        $memcached->flush();
-        logMessage($log_messages, "【Memcached】 已清空。");
-    } elseif ($cached_type === 'redis' && class_exists('Redis') && ($redis = new Redis()) && $redis->connect($Config['redis']['host'], $Config['redis']['port']) 
-        && (empty($Config['redis']['password']) || $redis->auth($Config['redis']['password'])) && $redis->ping()) {
-        $redis->flushAll();
-        logMessage($log_messages, "【Redis】 已清空。");
+    $cached_type = cacheFlush();
+    if ($cached_type) {
+        logMessage($log_messages, "【" . ucfirst($cached_type) . "】 已清空。");
     } else {
-        logMessage($log_messages, "【" . ucfirst($cached_type) . "】 状态异常。", true);
+        logMessage($log_messages, "【缓存】 状态异常。", true);
     }
 
     echo "<br>";
@@ -131,7 +126,7 @@ function formatTime($date, $time) {
 // 获取限定频道列表及映射关系
 function getGenList($db) {
     global $Config;
-    $channels = $db->query("SELECT channel FROM gen_list")->fetchAll(PDO::FETCH_COLUMN);
+    $channels = $db->query("SELECT channel FROM gen_list WHERE channel NOT LIKE '#%'")->fetchAll(PDO::FETCH_COLUMN);
     if (empty($channels)) {
         return ['gen_list_mapping' => [], 'gen_list' => []];
     }
@@ -226,14 +221,14 @@ function downloadXmlData($xml_url, $userAgent, $db, &$log_messages, $gen_list, $
         : round($fileSize / 1024, 2) . ' KB';
     logMessage($log_messages, "【下载】 成功 | xml 文件大小：{$fileSizeReadable}{$mtimeStr}");
     
-    $xml_data = mb_convert_encoding($xml_data, 'UTF-8'); // 转换成 UTF-8 编码
+    $xml_data = mb_convert_encoding(trim($xml_data), 'UTF-8'); // 转换成 UTF-8 编码
 
-    // 简单验证XML格式
-    if (stripos(trim($xml_data), '<?xml') !== 0) {
+    // 简单验证xmltv格式
+    if (stripos($xml_data, '<tv') === false) {
         static $retryCount = 0;
         if (!$isLocalFile && $retryCount < 5) {
             $retryCount++;
-            logMessage($log_messages, "【格式错误！！！】 不是有效的XML文件，10秒后重试 ({$retryCount}/5)", true);
+            logMessage($log_messages, "【格式错误！！！】 不是有效的xmltv文件，10秒后重试 ({$retryCount}/5)", true);
             sleep(10);
             return downloadXmlData(
                 $xml_url, $userAgent, $db, $log_messages, 
@@ -242,7 +237,7 @@ function downloadXmlData($xml_url, $userAgent, $db, &$log_messages, $gen_list, $
             );
         }
 
-        logMessage($log_messages, "【格式错误！！！】 重试5次后仍不是有效的XML文件", true);
+        logMessage($log_messages, "【格式错误！！！】 重试5次后仍不是有效的xmltv文件", true);
         echo "<br>";
         return;
     }
