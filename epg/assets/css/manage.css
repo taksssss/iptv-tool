@@ -57,7 +57,7 @@ textarea[id="channel_mappings"] {
 }
 
 textarea[id="gen_list_text"] {
-    min-height: 147px;
+    min-height: 110px;
 }
 
 textarea[id="sourceUrlTextarea"] {

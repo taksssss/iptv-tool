@@ -39,7 +39,7 @@
     <form method="POST" id="settingsForm">
         <label for="xml_urls">【EPG地址】</label>
         <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">频道指定源</span>
-        <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">【禁用/启用】</span>
+        <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">【停用/启用】</span>
         <br><br>
         <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
         <br><br>
@@ -401,7 +401,7 @@
             <span class="blue-span" onclick="openLiveSourceConfigDialog(true)">新建</span>
             <span class="blue-span" onclick="openLiveSourceConfigDialog(false)">另存</span>
             <span class="blue-span" onclick="deleteSource()">删除</span>
-            <span class="blue-span" id="mobileComment_source" onclick="commentAll('sourceUrlTextarea')">【禁用/启用】</span>
+            <span class="blue-span" id="mobileComment_source" onclick="commentAll('sourceUrlTextarea')">【停用/启用】</span>
             <br><textarea id="sourceUrlTextarea"></textarea>
         </div>
         <br>
@@ -697,12 +697,11 @@
                 </select>
             </div>
             <div class="column">
-                <form id="importForm" method="post" enctype="multipart/form-data" style="display: inline-block;">
-                    <input type="file" name="importFile" id="importFile" style="display: none;" accept=".gz">
-                    <input type="hidden" name="importExport" id="formImportExport" value="">
-                    <span class="blue-span" id="import" onclick="document.getElementById('importFile').click()" style="margin-right: 20px;">数据导入</span>
-                    <span class="blue-span" id="export" onclick="document.getElementById('importForm').submit()">数据导出</span>
-                </form>
+                <label for="channel_fuzzy_match">频道名模糊匹配：</label>
+                <select id="channel_fuzzy_match" name="channel_fuzzy_match" required>
+                <option value="1" <?php if (($Config['channel_fuzzy_match'] ?? 1) == 1) echo 'selected'; ?>>是</option>
+                <option value="0" <?php if (($Config['channel_fuzzy_match'] ?? 1) == 0) echo 'selected'; ?>>否</option>
+            </select>
             </div>
         </div>
 
@@ -739,7 +738,7 @@
         <div class="row">
             <div class="column">
                 <label for="cht_to_chs" title="">繁體转简体：</label>
-                <select id="cht_to_chs" name="cht_to_chs" required onchange="chtToChsChanged(this)">
+                <select id="cht_to_chs" name="cht_to_chs" required>
                     <option value="0" <?php if (@$Config['cht_to_chs'] == 0) echo 'selected'; ?>>关闭</option>
                     <option value="1" <?php if (($Config['cht_to_chs'] ?? 1) == 1) echo 'selected'; ?>>仅频道名</option>
                     <option value="2" <?php if (@$Config['cht_to_chs'] == 2) echo 'selected'; ?>>所有信息</option>
@@ -836,9 +835,25 @@
                 </select>
             </div>
             <div class="column">
+                <form id="importForm" method="post" enctype="multipart/form-data" style="display: inline-block;">
+                    <input type="file" name="importFile" id="importFile" style="display: none;" accept=".gz">
+                    <input type="hidden" name="importExport" id="formImportExport" value="">
+                    <span class="blue-span" id="import" onclick="document.getElementById('importFile').click()" style="margin-right: 20px;">数据导入</span>
+                    <span class="blue-span" id="export" onclick="document.getElementById('importForm').submit()">数据导出</span>
+                </form>
+            </div>
+        </div>
+
+        <!-- 第六行 -->
+        <div class="row">
+            <div class="column">
                 <a href="assets/tinyfilemanager/index.php?p=data&edit=customSource.php&env=ace" target="_blank" class="blue-span">
                     编辑自定义数据源
                 </a>
+            </div>
+            <div class="column">
+            </div>
+            <div class="column">
             </div>
         </div>
 

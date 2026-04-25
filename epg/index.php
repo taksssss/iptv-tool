@@ -181,51 +181,57 @@ function readEPGData($date, $oriChannelName, $cleanChannelName, $db, $type) {
     // 默认缓存 24 小时，更新数据时清空
     $cache_time = 24 * 3600;
 
-    // 检查 Memcached 状态
-    $cached_type = $Config['cached_type'] ?? 'memcached';
-    $memcached_enabled = $cached_type === 'memcached' && class_exists('Memcached') && ($memcached = new Memcached())->addServer('127.0.0.1', 11211);
-    $redis_enabled = $cached_type === 'redis' && class_exists('Redis') && ($redis = new Redis()) && $redis->connect($Config['redis']['host'], $Config['redis']['port']) 
-        && (empty($Config['redis']['password']) || $redis->auth($Config['redis']['password'])) && $redis->ping();
-    $cache_key = base64_encode("{$date}_{$cleanChannelName}_{$type}");
-
     // 从缓存中读取数据
-    if ($memcached_enabled) {
-        $cached_data = $memcached->get($cache_key);
-    } elseif ($redis_enabled) {
-        $cached_data = $redis->get($cache_key);
-    }
+    $cache_key = base64_encode("{$date}_{$cleanChannelName}_{$type}");
+    $cached_data = cacheGet($cache_key);
     if ($cached_data) {
         return preg_replace('#"(/data/icon/.*)#', '"' . $serverUrl . '$1', $cached_data);
     }
 
-    // 优先精准匹配，其次正向模糊匹配，最后反向模糊匹配
-    $stmt = $db->prepare("
-        SELECT epg_diyp
-        FROM epg_data
-        WHERE (
-            (channel = :channel
-            OR channel LIKE :like_channel
-            OR INSTR(:channel, channel) > 0)
+    $fuzzy = $Config['channel_fuzzy_match'] ?? 1;
+    if (!$fuzzy) {
+        // 仅精准匹配
+        $stmt = $db->prepare("
+            SELECT epg_diyp
+            FROM epg_data
+            WHERE channel = :channel
             AND date = :date
-        )
-        ORDER BY
-            CASE
-                WHEN channel = :channel THEN 1
-                WHEN channel LIKE :like_channel THEN 2
-                ELSE 3
-            END,
-            CASE
-                WHEN channel = :channel THEN NULL
-                WHEN channel LIKE :like_channel THEN LENGTH(channel)
-                ELSE -LENGTH(channel)
-            END
-        LIMIT 1
-    ");
-    $stmt->execute([
-        ':date' => $date,
-        ':channel' => $cleanChannelName,
-        ':like_channel' => $cleanChannelName . '%'
-    ]);
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':date' => $date,
+            ':channel' => $cleanChannelName
+        ]);
+    } else {
+        // 优先精准匹配，其次正向模糊匹配，最后反向模糊匹配
+        $stmt = $db->prepare("
+            SELECT epg_diyp
+            FROM epg_data
+            WHERE (
+                (channel = :channel
+                OR channel LIKE :like_channel
+                OR INSTR(:channel, channel) > 0)
+                AND date = :date
+            )
+            ORDER BY
+                CASE
+                    WHEN channel = :channel THEN 1
+                    WHEN channel LIKE :like_channel THEN 2
+                    ELSE 3
+                END,
+                CASE
+                    WHEN channel = :channel THEN NULL
+                    WHEN channel LIKE :like_channel THEN LENGTH(channel)
+                    ELSE -LENGTH(channel)
+                END
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':date' => $date,
+            ':channel' => $cleanChannelName,
+            ':like_channel' => $cleanChannelName . '%'
+        ]);
+    }
     $row = $stmt->fetchColumn();
 
     if (!$row) {
@@ -277,12 +283,7 @@ function readEPGData($date, $oriChannelName, $cleanChannelName, $db, $type) {
     }
 
     $response = json_encode($rowArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    
-    if ($memcached_enabled) {
-        $memcached->set($cache_key, $response, $cache_time);
-    } elseif ($redis_enabled) {
-        $redis->setex($cache_key, $cache_time, $response);
-    }
+    cacheSet($cache_key, $response, $cache_time);
 
     return preg_replace('#"(/data/icon/.*)#', '"' . $serverUrl . '$1', $response);
 }
@@ -393,7 +394,7 @@ function fetchHandler($query_params) {
 
     // 获取并清理频道名称，繁体转换成简体
     $oriChannelName = $query_params['ch'] ?? $query_params['channel'] ?? '';
-    $cleanChannelName = cleanChannelName($oriChannelName, $t2s = ($Config['cht_to_chs'] ?? false));
+    $cleanChannelName = cleanChannelName($oriChannelName, $t2s = ($Config['cht_to_chs'] ?? 0));
     $date = getFormatTime(preg_replace('/\D+/', '', $query_params['date'] ?? ''))['date'] ?? getNowDate();
 
     // 处理台标请求

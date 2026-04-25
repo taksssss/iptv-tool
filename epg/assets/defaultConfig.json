@@ -10,6 +10,7 @@
     "channel_bind_epg": [],
     "gen_xml": 1,
     "include_future_only": 0,
+    "channel_fuzzy_match": 1,
     "ret_default": 0,
     "cht_to_chs": 1,
     "db_type": "sqlite",
