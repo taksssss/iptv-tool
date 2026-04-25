@@ -9,7 +9,7 @@
  * GitHub: https://github.com/taksssss/iptv-tool
  */
 
-require 'assets/opencc/vendor/autoload.php'; // 引入 Composer 自动加载器
+require_once 'assets/opencc/vendor/autoload.php'; // 引入 Composer 自动加载器
 use Overtrue\PHPOpenCC\OpenCC; // 使用 OpenCC 库
 
 // 检查并解析配置文件和图标列表文件
@@ -128,6 +128,69 @@ function initialDB() {
     foreach ($tables as $sql) $db->exec($sql);
 }
 
+// 获取缓存实例
+function getCacheInstance() {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    global $Config;
+    $type = $Config['cached_type'] ?? 'memcached';
+
+    if ($type === 'memcached' && class_exists('Memcached')) {
+        $m = new Memcached();
+        if ($m->addServer('127.0.0.1', 11211)) {
+            return $cache = ['type' => 'memcached', 'client' => $m];
+        }
+    }
+
+    if ($type === 'redis' && class_exists('Redis')) {
+        $r = new Redis();
+        if (
+            $r->connect($Config['redis']['host'], $Config['redis']['port']) &&
+            (empty($Config['redis']['password']) || $r->auth($Config['redis']['password'])) &&
+            $r->ping()
+        ) {
+            return $cache = ['type' => 'redis', 'client' => $r];
+        }
+    }
+
+    return $cache = null;
+}
+
+// 清缓存
+function cacheFlush() {
+    $cache = getCacheInstance();
+    if (!$cache) return false;
+
+    $ok = $cache['type'] === 'memcached'
+        ? $cache['client']->flush()
+        : $cache['client']->flushAll();
+
+    return $ok ? $cache['type'] : false;
+}
+
+// 读缓存
+function cacheGet($key) {
+    $cache = getCacheInstance();
+    return $cache ? $cache['client']->get($key) : null;
+}
+
+// 写缓存
+function cacheSet($key, $value, $ttl = 0) {
+    $cache = getCacheInstance();
+    if (!$cache) return false;
+
+    if ($cache['type'] === 'memcached') {
+        return $cache['client']->set($key, $value, $ttl);
+    }
+
+    if ($cache['type'] === 'redis') {
+        return $cache['client']->setex($key, $ttl, $value);
+    }
+
+    return false;
+}
+
 // 获取处理后的频道名：$t2s参数表示是否进行繁转简，默认 false
 function cleanChannelName($channel, $t2s = false) {
     global $Config;
@@ -176,17 +239,23 @@ function t2sBatch($channels) {
     return explode("\x1E", t2s($joined));
 }
 
-// 台标模糊匹配
+// 台标匹配
 function iconUrlMatch($channels, $getDefault = true) {
     global $Config, $iconListDefault, $iconListMerged, $serverUrl;
 
     // 支持传入字符串或数组
     $channelList = is_array($channels) ? $channels : [$channels];
+    $fuzzy = $Config['channel_fuzzy_match'] ?? 1;
 
     foreach ($channelList as $originalChannel) {
         // 精确匹配
         if (isset($iconListMerged[$originalChannel])) {
             return $iconListMerged[$originalChannel];
+        }
+
+        // 关闭模糊匹配：直接跳过
+        if (!$fuzzy) {
+            continue;
         }
 
         $bestMatch = null;
@@ -491,6 +560,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
     global $liveDir, $liveFileDir, $Config;
     $liveChannelNameProcess = $Config['live_channel_name_process'] ?? false; // 标记是否处理频道名
     $liveSourceConfig = $Config['live_source_config'] ?? 'default';
+    $fuzzy = $Config['channel_fuzzy_match'] ?? 1;
     
     // 获取已存在的数据
     $existingData = getExistingData();
@@ -868,7 +938,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
         // 将所有 channelName、groupTitle 整合到一起，进行繁简转换
         $channelNames = array_column($urlChannelData, 'channelName');
         $groupTitles = array_column($urlChannelData, 'groupTitle');
-        $chsChannelNames = t2sBatch($channelNames);
+        $chsChannelNames = ($Config['cht_to_chs'] ?? 0) ? t2sBatch($channelNames) : $channelNames;
         $chsGroupTitles = t2sBatch($groupTitles);
 
         // 将转换后的信息写回 urlChannelData
@@ -927,7 +997,7 @@ function doParseSourceInfo($urlLine = null, $parseAll = false) {
             // 更新部分信息
             $row['streamUrl'] = $extOptStreamUrl;
             $cleanChannelName = cleanChannelName($chsChannelName);
-            $dbChannelName = dbChannelNameMatch($cleanChannelName, $dbChannels);
+            $dbChannelName = $fuzzy ? dbChannelNameMatch($cleanChannelName, $dbChannels) : $cleanChannelName;
             $finalChannelName = $dbChannelName ?: $cleanChannelName;
             $oriChannelName = $row['channelName'];
 
