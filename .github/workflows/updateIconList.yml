@@ -1,9 +1,9 @@
 name: Update Icon List
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [synciconlist]
 
 jobs:
   update-icon-list:
