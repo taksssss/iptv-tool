@@ -1,9 +1,9 @@
-FROM alpine:3.20
+FROM alpine:3.23
 LABEL maintainer="decat2008@gmail.com"
 LABEL description="Alpine based image with nginx and php8.3-fpm."
 
-# 使用中科大镜像（改用GitHub Actions，无需镜像）
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+# 使用阿里云镜像（改用GitHub Actions，无需镜像）
+# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # 安装常用扩展
 RUN apk --no-cache --update \

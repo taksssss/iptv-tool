@@ -21,7 +21,7 @@ echo 'Updating configurations'
 # Optional ffmpeg installation
 if [ "$ENABLE_FFMPEG" = "true" ]; then
     echo "Using USTC mirror for package installation..."
-    sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+    sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
     if ! apk info ffmpeg > /dev/null 2>&1; then
         echo "Installing ffmpeg..."
         apk add --no-cache ffmpeg
