@@ -91,6 +91,30 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     session_write_close();
 }
 
+// 频道排序
+function sortChannels($channels) {
+    $groups = [[], [], []]; // 数字、英文、中文
+    foreach ($channels as $ch) {
+        $first = mb_substr($ch, 0, 1, 'UTF-8');
+        if (preg_match('/[0-9]/', $first)) $groups[0][] = $ch;
+        elseif (preg_match('/[A-Za-z]/', $first)) $groups[1][] = $ch;
+        else $groups[2][] = $ch;
+    }
+
+    // 数字、英文始终使用自然排序
+    usort($groups[0], 'strnatcasecmp');
+    usort($groups[1], 'strnatcasecmp');
+
+    // 中文有 Collator 用拼音排序，否则使用自然排序
+    if (class_exists('Collator')) {
+        (new Collator('zh_CN'))->sort($groups[2]);
+    } else {
+        usort($groups[2], 'strnatcasecmp');
+    }
+
+    return array_merge(...$groups);
+}
+
 // 更新配置
 function updateConfigFields() {
     global $Config, $configPath;
@@ -224,30 +248,6 @@ try {
             case 'get_channel':
                 // 获取频道
                 $channels = $db->query("SELECT DISTINCT channel FROM epg_data ORDER BY channel ASC")->fetchAll(PDO::FETCH_COLUMN);
-
-                function sortChannels($channels) {
-                    $groups = [[], [], []]; // 数字、英文、中文
-                    foreach ($channels as $ch) {
-                        $first = mb_substr($ch, 0, 1, 'UTF-8');
-                        if (preg_match('/[0-9]/', $first)) $groups[0][] = $ch;
-                        elseif (preg_match('/[A-Za-z]/', $first)) $groups[1][] = $ch;
-                        else $groups[2][] = $ch;
-                    }
-
-                    // 数字、英文始终使用自然排序
-                    usort($groups[0], 'strnatcasecmp');
-                    usort($groups[1], 'strnatcasecmp');
-
-                    // 中文有 Collator 用拼音排序，否则使用自然排序
-                    if (class_exists('Collator')) {
-                        (new Collator('zh_CN'))->sort($groups[2]);
-                    } else {
-                        usort($groups[2], 'strnatcasecmp');
-                    }
-
-                    return array_merge(...$groups);
-                }
-
                 $channels = sortChannels($channels);
 
                 // 将频道忽略字符插入到频道列表的开头
@@ -309,7 +309,7 @@ try {
                     $db->query("SELECT DISTINCT channel FROM epg_data ORDER BY channel ASC")->fetchAll(PDO::FETCH_COLUMN),
                     array_keys($iconList)
                 ));
-                sort($allChannels);
+                $allChannels = sortChannels($allChannels);
 
                 // 将默认台标插入到频道列表的开头
                 $defaultIcon = [
