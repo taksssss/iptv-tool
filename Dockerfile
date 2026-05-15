@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.20
 LABEL maintainer="decat2008@gmail.com"
 LABEL description="Alpine based image with nginx and php8.3-fpm."
 
