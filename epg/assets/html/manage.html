@@ -583,6 +583,7 @@
 
         <!-- 第四行 -->
         <div class="button-container button-container-check-speed" style="margin-top: 25px;">
+            <button id="installFfmpegBtn" onclick="showExecResult('install_ffmpeg.php', () => showModal('live', popup = false), fullSize = false)">一键安装 ffmpeg</button>
             <button id="foregroundCheckBtn" onclick="showExecResult('check.php', () => showModal('live', popup = false))">前台测速</button>
             <button id="backgroundCheckBtn" onclick="showExecResult('check.php?backgroundMode=1', () => showModal('live', popup = false), fullSize = false)">后台测速</button>
             <button id="cleanCheckResultBtn" onclick="showExecResult('check.php?cleanMode=1', () => showModal('live', popup = false), fullSize = false)">清除结果</button>

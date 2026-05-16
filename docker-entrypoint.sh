@@ -5,15 +5,10 @@ SERVER_NAME="${SERVER_NAME:-www.example.com}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 TZ="${TZ:-Asia/Shanghai}"
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-512M}"
-ENABLE_FFMPEG="${ENABLE_FFMPEG:-false}"
 ENABLE_IPV6="${ENABLE_IPV6:-false}"
 
 HTTP_PORT="${HTTP_PORT:-80}"
 HTTPS_PORT="${HTTPS_PORT:-443}"
-FFMPEG_DOWNLOAD_RETRIES="${FFMPEG_DOWNLOAD_RETRIES:-3}"
-FFMPEG_DOWNLOAD_TIMEOUT="${FFMPEG_DOWNLOAD_TIMEOUT:-15}"
-FFMPEG_DOWNLOAD_MAX_TIME="${FFMPEG_DOWNLOAD_MAX_TIME:-600}"
-FFMPEG_ARCH_OVERRIDE="${FFMPEG_ARCH_OVERRIDE:-}"
 
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
 FORCE_HTTPS="${FORCE_HTTPS:-false}"
@@ -21,67 +16,6 @@ CERT_FILE="${CERT_FILE:-/etc/ssl/certs/server.crt}"
 KEY_FILE="${KEY_FILE:-/etc/ssl/private/server.key}"
 
 echo 'Updating configurations'
-
-# Optional ffmpeg installation
-if [ "$ENABLE_FFMPEG" = "true" ]; then
-    if command -v ffprobe > /dev/null 2>&1; then
-        echo "ffmpeg is already installed."
-    else
-        echo "Installing ffmpeg from web release..."
-
-        case "$(uname -m)" in
-            x86_64|amd64) FFMPEG_ARCH="x64" ;;
-            aarch64|arm64) FFMPEG_ARCH="arm64" ;;
-            armv7l|armv6l|armhf) FFMPEG_ARCH="arm" ;;
-            *)
-                echo "ERROR: unsupported architecture for ffmpeg web install: $(uname -m)"
-                exit 1
-                ;;
-        esac
-        [ -n "$FFMPEG_ARCH_OVERRIDE" ] && FFMPEG_ARCH="$FFMPEG_ARCH_OVERRIDE"
-
-        BASE_URL="${FFMPEG_BASE_URL:-https://github.com/eugeneware/ffmpeg-static/releases/latest/download}"
-        TMP_DIR="$(mktemp -d /tmp/ffmpeg-install.XXXXXX)"
-        trap 'rm -rf "$TMP_DIR"' EXIT
-
-        FFMPEG_TMP="$TMP_DIR/ffmpeg"
-        FFPROBE_TMP="$TMP_DIR/ffprobe"
-
-        if ! curl -fL --retry "$FFMPEG_DOWNLOAD_RETRIES" --connect-timeout "$FFMPEG_DOWNLOAD_TIMEOUT" --max-time "$FFMPEG_DOWNLOAD_MAX_TIME" "${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}" -o "$FFMPEG_TMP"; then
-            echo "ERROR: failed to download ffmpeg from ${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}"
-            exit 1
-        fi
-        if ! curl -fL --retry "$FFMPEG_DOWNLOAD_RETRIES" --connect-timeout "$FFMPEG_DOWNLOAD_TIMEOUT" --max-time "$FFMPEG_DOWNLOAD_MAX_TIME" "${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}" -o "$FFPROBE_TMP"; then
-            echo "ERROR: failed to download ffprobe from ${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}"
-            exit 1
-        fi
-
-        if [ ! -s "$FFMPEG_TMP" ]; then
-            echo "ERROR: downloaded ffmpeg file is empty"
-            exit 1
-        fi
-        if [ ! -s "$FFPROBE_TMP" ]; then
-            echo "ERROR: downloaded ffprobe file is empty"
-            exit 1
-        fi
-
-        install -m 0755 "$FFMPEG_TMP" /usr/local/bin/ffmpeg
-        install -m 0755 "$FFPROBE_TMP" /usr/local/bin/ffprobe
-
-        ffmpeg -version > /dev/null 2>&1 || {
-            echo "ERROR: ffmpeg validation failed after installation"
-            exit 1
-        }
-        ffprobe -version > /dev/null 2>&1 || {
-            echo "ERROR: ffprobe validation failed after installation"
-            exit 1
-        }
-
-        echo "ffmpeg installed successfully."
-    fi
-else
-    echo "Skipping ffmpeg installation."
-fi
 
 # Validate certificate files for HTTPS
 if [ "$ENABLE_HTTPS" = "true" ]; then

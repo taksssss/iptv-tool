@@ -102,7 +102,6 @@ docker run -d --name php-epg \
   -p 5678:80 \
   -v $HOME/epg:/htdocs/data \
   -e PHP_MEMORY_LIMIT=512M \
-  -e ENABLE_FFMPEG=false \
   --restart unless-stopped \
   taksss/php-epg:latest
 ```
@@ -110,7 +109,6 @@ docker run -d --name php-epg \
 > `$HOME/epg`：默认数据目录，根据需要自行修改  
 > `5678`：默认端口，根据需要自行修改（注意端口占用）  
 > `-e PHP_MEMORY_LIMIT=512M`：PHP 内存限制，默认 `512M`  
-> `-e ENABLE_FFMPEG=true`：启用 ffmpeg 组件（容器启动时在线下载静态包安装）  
 > 无法正常拉取镜像的，可将 `taksss/php-epg:latest` 替换为 `ccr.ccs.tencentyun.com/taksss/php-epg:latest`
 
 > **HTTPS 相关：**  
@@ -137,7 +135,8 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtow
     > 隔 `6 ~ 12` 小时抓一次即可。
 
 6. 点击 `更多设置`，选择是否 `生成xml文件`、`xml内容`，设置`匹配频道列表`
-7. 测试各个接口的返回结果是否正确：
+7. 如需直播源测速，先进入「测速校验」点击 **一键安装 ffmpeg**，安装完成后再执行测速。  
+8. 测试各个接口的返回结果是否正确：
 
 - `xmltv` 接口：`http://{服务器IP地址}:5678/index.php`
 - `DIYP/百川` 接口：`http://{服务器IP地址}:5678/index.php?ch=CCTV1`
@@ -146,7 +145,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtow
   - `"epg":"http://{服务器IP地址}:5678/index.php?ch={name}&date={date}"`
   - `"logo":"http://{服务器IP地址}:5678/index.php?ch={name}&type=icon"`
 
-8. 将 **`http://{服务器IP地址}:5678/index.php`** 填入 `DIYP`、`TiviMate` 等软件的 `EPG 地址栏`
+9. 将 **`http://{服务器IP地址}:5678/index.php`** 填入 `DIYP`、`TiviMate` 等软件的 `EPG 地址栏`
 
 - ⚠️ 直接使用 `docker run` 运行的话，可以将 `:5678/index.php` 替换为 **`:5678/`**。
 - ⚠️ 部分软件不支持跳转解析 `xmltv` 文件，可直接使用 **`:5678/t.xml.gz`** 或 **`:5678/t.xml`** 访问。

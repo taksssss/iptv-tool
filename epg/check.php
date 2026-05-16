@@ -29,9 +29,14 @@ if (php_sapi_name() !== 'cli' && (empty($_SESSION['loggedin']) || $_SESSION['log
 }
 session_write_close();
 
-// 检测 ffmpeg 是否安装
-if (!shell_exec('which ffprobe')) {
-    echo '<p>未检测到 ffmpeg 环境，请重新部署。<p>';
+// 检测 ffmpeg 是否安装（优先使用网页端安装路径）
+$localFfprobePath = __DIR__ . '/data/scripts/bin/ffprobe';
+$ffprobeBin = is_executable($localFfprobePath)
+    ? $localFfprobePath
+    : trim((string)shell_exec('which ffprobe 2>/dev/null'));
+
+if ($ffprobeBin === '') {
+    echo '<p>未检测到 ffmpeg 环境，请先在「测速校验」里点击“一键安装 ffmpeg”。<p>';
     exit;
 }
 
@@ -201,7 +206,7 @@ foreach ($channels as $i => $channel) {
         }
         $requestHeaderStr = $requestHeaderStr ? '-headers ' . escapeshellarg($requestHeaderStr) . ' ' : '';
 
-        $cmd = "ffprobe -rw_timeout 2000000 {$requestHeaderStr}"
+        $cmd = escapeshellarg($ffprobeBin) . " -rw_timeout 2000000 {$requestHeaderStr}"
              . "-v error -select_streams v:0 "
              . "-show_entries stream=width,height "
              . "-of csv=p=0 "

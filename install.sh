@@ -140,13 +140,6 @@ set_env() {
     read -p "PHP 内存限制 [默认 512M]: " PHP_MEMORY_LIMIT
     PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT:-512M}
 
-    read -p "是否启用 ffmpeg? (y/n 默认 n): " FFMPEG_CHOICE
-    if [ "$FFMPEG_CHOICE" = "y" ] || [ "$FFMPEG_CHOICE" = "Y" ]; then
-        ENABLE_FFMPEG=true
-    else
-        ENABLE_FFMPEG=false
-    fi
-
     read -p "是否启用 HTTPS？(y/n 默认 n): " HTTPS_CHOICE
     if [[ "$HTTPS_CHOICE" =~ ^[yY]$ ]]; then
         ENABLE_HTTPS=true
@@ -202,7 +195,6 @@ start_container() {
             -v $DATA_DIR:/htdocs/data \
             $CERT_MOUNT \
             -e PHP_MEMORY_LIMIT=$PHP_MEMORY_LIMIT \
-            -e ENABLE_FFMPEG=$ENABLE_FFMPEG \
             -e ENABLE_HTTPS=$ENABLE_HTTPS \
             -e FORCE_HTTPS=$FORCE_HTTPS \
             --restart unless-stopped \
@@ -226,7 +218,6 @@ start_container() {
             $CERT_MOUNT \
             $ENV_PORTS \
             -e PHP_MEMORY_LIMIT=$PHP_MEMORY_LIMIT \
-            -e ENABLE_FFMPEG=$ENABLE_FFMPEG \
             -e ENABLE_HTTPS=$ENABLE_HTTPS \
             -e FORCE_HTTPS=$FORCE_HTTPS \
             -e ENABLE_IPV6=$ENABLE_IPV6 \
@@ -252,7 +243,6 @@ start_container() {
     [ -n "$HTTPS_PORT" ] && echo "HTTPS端口：$HTTPS_PORT"
     [ "$ENABLE_HTTPS" = "true" ] && echo "HTTPS：已启用（强制跳转：$FORCE_HTTPS）"
     echo "PHP 内存限制：$PHP_MEMORY_LIMIT"
-    echo "ffmpeg 启用：$ENABLE_FFMPEG"
     echo -e "\n访问地址: http://{服务器IP地址}:$HTTP_PORT/manage.php"
     echo -e "${BOLD}${RED}请务必阅读页面底部「使用说明」！${RESET}\n"
 }
