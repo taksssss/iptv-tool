@@ -33,7 +33,7 @@ session_write_close();
 $localFfprobePath = __DIR__ . '/data/scripts/bin/ffprobe';
 $ffprobeBin = is_executable($localFfprobePath)
     ? $localFfprobePath
-    : trim((string)shell_exec('which ffprobe 2>/dev/null'));
+    : trim(shell_exec('which ffprobe 2>/dev/null') ?: '');
 
 if ($ffprobeBin === '') {
     echo '<p>未检测到 ffmpeg 环境，请先在「测速校验」里点击“一键安装 ffmpeg”。<p>';

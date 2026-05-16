@@ -117,6 +117,7 @@ docker run -d --name php-epg \
 > `-e FORCE_HTTPS=true`：强制跳转到 HTTPS  
 > `-v /path/to/server.crt:/etc/ssl/certs/server.crt`：挂载证书文件  
 > `-v /path/to/server.key:/etc/ssl/private/server.key`：挂载私钥文件
+> `-e FFMPEG_ARCH_OVERRIDE=x64`：网页端安装 ffmpeg 时手动覆盖架构（一般无需设置）
 
 手动升级
 ```bash

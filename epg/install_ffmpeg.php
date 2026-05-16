@@ -47,11 +47,11 @@ function detectFfmpegArch() {
     return '';
 }
 
-function downloadBinary($url, $destination, $connectTimeout, $maxTime, $retries) {
-    $attempts = max(1, $retries + 1);
+function downloadBinary($url, $destination, $connectTimeout, $maxTime, $maxRetries) {
+    $totalAttempts = $maxRetries + 1; // 首次下载 + 重试次数
     $errorMessage = '未知错误';
 
-    for ($i = 1; $i <= $attempts; $i++) {
+    for ($i = 1; $i <= $totalAttempts; $i++) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -65,7 +65,7 @@ function downloadBinary($url, $destination, $connectTimeout, $maxTime, $retries)
         $errorMessage = curl_error($ch);
         curl_close($ch);
 
-        if ($content !== false && strlen($content) > 0) {
+        if ($content !== false && $content !== '') {
             if (file_put_contents($destination, $content) !== false) {
                 @chmod($destination, 0755);
                 return true;
@@ -85,7 +85,7 @@ if ($arch === '') {
 $baseUrl = getenv('FFMPEG_BASE_URL') ?: 'https://github.com/eugeneware/ffmpeg-static/releases/latest/download';
 $connectTimeout = (int)(getenv('FFMPEG_DOWNLOAD_TIMEOUT') ?: 15);
 $maxTime = (int)(getenv('FFMPEG_DOWNLOAD_MAX_TIME') ?: 600);
-$retries = (int)(getenv('FFMPEG_DOWNLOAD_RETRIES') ?: 3);
+$maxRetries = max(0, (int)(getenv('FFMPEG_DOWNLOAD_RETRIES') ?: 3));
 
 $ffmpegUrl = "{$baseUrl}/ffmpeg-linux-{$arch}";
 $ffprobeUrl = "{$baseUrl}/ffprobe-linux-{$arch}";
@@ -93,14 +93,14 @@ $ffprobeUrl = "{$baseUrl}/ffprobe-linux-{$arch}";
 logInstallMessage("开始安装 ffmpeg（架构：{$arch}）...");
 
 logInstallMessage("下载 ffmpeg：{$ffmpegUrl}");
-$ffmpegResult = downloadBinary($ffmpegUrl, $ffmpegPath, $connectTimeout, $maxTime, $retries);
+$ffmpegResult = downloadBinary($ffmpegUrl, $ffmpegPath, $connectTimeout, $maxTime, $maxRetries);
 if ($ffmpegResult !== true || !is_file($ffmpegPath) || filesize($ffmpegPath) <= 0) {
     @unlink($ffmpegPath);
     exit("下载 ffmpeg 失败：{$ffmpegResult}");
 }
 
 logInstallMessage("下载 ffprobe：{$ffprobeUrl}");
-$ffprobeResult = downloadBinary($ffprobeUrl, $ffprobePath, $connectTimeout, $maxTime, $retries);
+$ffprobeResult = downloadBinary($ffprobeUrl, $ffprobePath, $connectTimeout, $maxTime, $maxRetries);
 if ($ffprobeResult !== true || !is_file($ffprobePath) || filesize($ffprobePath) <= 0) {
     @unlink($ffprobePath);
     exit("下载 ffprobe 失败：{$ffprobeResult}");
@@ -125,4 +125,3 @@ if ($ffprobeCode !== 0) {
 }
 
 logInstallMessage('ffmpeg 安装成功，可开始测速。');
-
