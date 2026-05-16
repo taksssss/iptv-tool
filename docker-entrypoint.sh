@@ -20,13 +20,58 @@ echo 'Updating configurations'
 
 # Optional ffmpeg installation
 if [ "$ENABLE_FFMPEG" = "true" ]; then
-    echo "Using USTC mirror for package installation..."
-    sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-    if ! apk info ffmpeg > /dev/null 2>&1; then
-        echo "Installing ffmpeg..."
-        apk add --no-cache ffmpeg
-    else
+    if command -v ffprobe > /dev/null 2>&1; then
         echo "ffmpeg is already installed."
+    else
+        echo "Installing ffmpeg from web release..."
+
+        case "$(uname -m)" in
+            x86_64|amd64) FFMPEG_ARCH="linux64" ;;
+            aarch64|arm64) FFMPEG_ARCH="linuxarm64" ;;
+            *)
+                echo "ERROR: unsupported architecture for ffmpeg web install: $(uname -m)"
+                exit 1
+                ;;
+        esac
+
+        RELEASE_API="https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
+        RELEASE_JSON="$(curl -fsSL "$RELEASE_API")"
+        FFMPEG_URL="$(printf '%s\n' "$RELEASE_JSON" | grep -Eo "https://[^\"]*ffmpeg-N-[^\"]*-${FFMPEG_ARCH}-gpl\.tar\.xz" | head -n 1 || true)"
+        if [ -z "$FFMPEG_URL" ]; then
+            FFMPEG_URL="$(printf '%s\n' "$RELEASE_JSON" | grep -Eo "https://[^\"]*ffmpeg-[^\"]*-${FFMPEG_ARCH}-gpl\.tar\.xz" | grep -v 'shared' | head -n 1 || true)"
+        fi
+
+        if [ -z "$FFMPEG_URL" ]; then
+            echo "ERROR: cannot find ffmpeg download url for architecture: $FFMPEG_ARCH"
+            exit 1
+        fi
+
+        TMP_DIR="$(mktemp -d /tmp/ffmpeg-install.XXXXXX)"
+        trap 'rm -rf "$TMP_DIR"' EXIT
+
+        ARCHIVE_PATH="$TMP_DIR/ffmpeg.tar.xz"
+        curl -fL "$FFMPEG_URL" -o "$ARCHIVE_PATH"
+        tar -xJf "$ARCHIVE_PATH" -C "$TMP_DIR"
+
+        FFMPEG_BIN="$(find "$TMP_DIR" -type f -name ffmpeg | head -n 1)"
+        FFPROBE_BIN="$(find "$TMP_DIR" -type f -name ffprobe | head -n 1)"
+
+        if [ -z "$FFMPEG_BIN" ] || [ -z "$FFPROBE_BIN" ]; then
+            echo "ERROR: ffmpeg or ffprobe binary not found in downloaded archive"
+            exit 1
+        fi
+
+        install -m 0755 "$FFMPEG_BIN" /usr/local/bin/ffmpeg
+        install -m 0755 "$FFPROBE_BIN" /usr/local/bin/ffprobe
+
+        ffprobe -version > /dev/null 2>&1 || {
+            echo "ERROR: ffmpeg installed but ffprobe check failed"
+            exit 1
+        }
+
+        rm -rf "$TMP_DIR"
+        trap - EXIT
+        echo "ffmpeg installed successfully."
     fi
 else
     echo "Skipping ffmpeg installation."

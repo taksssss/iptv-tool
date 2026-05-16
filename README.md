@@ -110,7 +110,7 @@ docker run -d --name php-epg \
 > `$HOME/epg`：默认数据目录，根据需要自行修改  
 > `5678`：默认端口，根据需要自行修改（注意端口占用）  
 > `-e PHP_MEMORY_LIMIT=512M`：PHP 内存限制，默认 `512M`  
-> `-e ENABLE_FFMPEG=true`：启用 ffmpeg 组件  
+> `-e ENABLE_FFMPEG=true`：启用 ffmpeg 组件（容器启动时在线下载静态包安装）  
 > 无法正常拉取镜像的，可将 `taksss/php-epg:latest` 替换为 `ccr.ccs.tencentyun.com/taksss/php-epg:latest`
 
 > **HTTPS 相关：**  
