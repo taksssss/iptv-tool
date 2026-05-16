@@ -26,43 +26,27 @@ if [ "$ENABLE_FFMPEG" = "true" ]; then
         echo "Installing ffmpeg from web release..."
 
         case "$(uname -m)" in
-            x86_64|amd64) FFMPEG_ARCH="linux64" ;;
-            aarch64|arm64) FFMPEG_ARCH="linuxarm64" ;;
+            x86_64|amd64) FFMPEG_ARCH="x64" ;;
+            aarch64|arm64) FFMPEG_ARCH="arm64" ;;
+            armv7l|armv6l|armhf) FFMPEG_ARCH="arm" ;;
             *)
                 echo "ERROR: unsupported architecture for ffmpeg web install: $(uname -m)"
                 exit 1
                 ;;
         esac
 
-        RELEASE_API="https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
-        RELEASE_JSON="$(curl -fsSL "$RELEASE_API")"
-        FFMPEG_URL="$(printf '%s\n' "$RELEASE_JSON" | grep -Eo "https://[^\"]*ffmpeg-N-[^\"]*-${FFMPEG_ARCH}-gpl\.tar\.xz" | head -n 1 || true)"
-        if [ -z "$FFMPEG_URL" ]; then
-            FFMPEG_URL="$(printf '%s\n' "$RELEASE_JSON" | grep -Eo "https://[^\"]*ffmpeg-[^\"]*-${FFMPEG_ARCH}-gpl\.tar\.xz" | grep -v 'shared' | head -n 1 || true)"
-        fi
-
-        if [ -z "$FFMPEG_URL" ]; then
-            echo "ERROR: cannot find ffmpeg download url for architecture: $FFMPEG_ARCH"
-            exit 1
-        fi
-
+        BASE_URL="https://github.com/eugeneware/ffmpeg-static/releases/latest/download"
         TMP_DIR="$(mktemp -d /tmp/ffmpeg-install.XXXXXX)"
         trap 'rm -rf "$TMP_DIR"' EXIT
 
-        ARCHIVE_PATH="$TMP_DIR/ffmpeg.tar.xz"
-        curl -fL "$FFMPEG_URL" -o "$ARCHIVE_PATH"
-        tar -xJf "$ARCHIVE_PATH" -C "$TMP_DIR"
+        FFMPEG_TMP="$TMP_DIR/ffmpeg"
+        FFPROBE_TMP="$TMP_DIR/ffprobe"
 
-        FFMPEG_BIN="$(find "$TMP_DIR" -type f -name ffmpeg | head -n 1)"
-        FFPROBE_BIN="$(find "$TMP_DIR" -type f -name ffprobe | head -n 1)"
+        curl -fL --retry 3 --connect-timeout 15 "${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}" -o "$FFMPEG_TMP"
+        curl -fL --retry 3 --connect-timeout 15 "${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}" -o "$FFPROBE_TMP"
 
-        if [ -z "$FFMPEG_BIN" ] || [ -z "$FFPROBE_BIN" ]; then
-            echo "ERROR: ffmpeg or ffprobe binary not found in downloaded archive"
-            exit 1
-        fi
-
-        install -m 0755 "$FFMPEG_BIN" /usr/local/bin/ffmpeg
-        install -m 0755 "$FFPROBE_BIN" /usr/local/bin/ffprobe
+        install -m 0755 "$FFMPEG_TMP" /usr/local/bin/ffmpeg
+        install -m 0755 "$FFPROBE_TMP" /usr/local/bin/ffprobe
 
         ffprobe -version > /dev/null 2>&1 || {
             echo "ERROR: ffmpeg installed but ffprobe check failed"
