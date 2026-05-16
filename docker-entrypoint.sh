@@ -10,6 +10,10 @@ ENABLE_IPV6="${ENABLE_IPV6:-false}"
 
 HTTP_PORT="${HTTP_PORT:-80}"
 HTTPS_PORT="${HTTPS_PORT:-443}"
+FFMPEG_DOWNLOAD_RETRIES="${FFMPEG_DOWNLOAD_RETRIES:-3}"
+FFMPEG_DOWNLOAD_TIMEOUT="${FFMPEG_DOWNLOAD_TIMEOUT:-15}"
+FFMPEG_DOWNLOAD_MAX_TIME="${FFMPEG_DOWNLOAD_MAX_TIME:-600}"
+FFMPEG_ARCH_OVERRIDE="${FFMPEG_ARCH_OVERRIDE:-}"
 
 ENABLE_HTTPS="${ENABLE_HTTPS:-false}"
 FORCE_HTTPS="${FORCE_HTTPS:-false}"
@@ -34,27 +38,45 @@ if [ "$ENABLE_FFMPEG" = "true" ]; then
                 exit 1
                 ;;
         esac
+        [ -n "$FFMPEG_ARCH_OVERRIDE" ] && FFMPEG_ARCH="$FFMPEG_ARCH_OVERRIDE"
 
-        BASE_URL="https://github.com/eugeneware/ffmpeg-static/releases/latest/download"
+        BASE_URL="${FFMPEG_BASE_URL:-https://github.com/eugeneware/ffmpeg-static/releases/latest/download}"
         TMP_DIR="$(mktemp -d /tmp/ffmpeg-install.XXXXXX)"
         trap 'rm -rf "$TMP_DIR"' EXIT
 
         FFMPEG_TMP="$TMP_DIR/ffmpeg"
         FFPROBE_TMP="$TMP_DIR/ffprobe"
 
-        curl -fL --retry 3 --connect-timeout 15 "${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}" -o "$FFMPEG_TMP"
-        curl -fL --retry 3 --connect-timeout 15 "${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}" -o "$FFPROBE_TMP"
+        if ! curl -fL --retry "$FFMPEG_DOWNLOAD_RETRIES" --connect-timeout "$FFMPEG_DOWNLOAD_TIMEOUT" --max-time "$FFMPEG_DOWNLOAD_MAX_TIME" "${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}" -o "$FFMPEG_TMP"; then
+            echo "ERROR: failed to download ffmpeg from ${BASE_URL}/ffmpeg-linux-${FFMPEG_ARCH}"
+            exit 1
+        fi
+        if ! curl -fL --retry "$FFMPEG_DOWNLOAD_RETRIES" --connect-timeout "$FFMPEG_DOWNLOAD_TIMEOUT" --max-time "$FFMPEG_DOWNLOAD_MAX_TIME" "${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}" -o "$FFPROBE_TMP"; then
+            echo "ERROR: failed to download ffprobe from ${BASE_URL}/ffprobe-linux-${FFMPEG_ARCH}"
+            exit 1
+        fi
+
+        if [ ! -s "$FFMPEG_TMP" ]; then
+            echo "ERROR: downloaded ffmpeg file is empty"
+            exit 1
+        fi
+        if [ ! -s "$FFPROBE_TMP" ]; then
+            echo "ERROR: downloaded ffprobe file is empty"
+            exit 1
+        fi
 
         install -m 0755 "$FFMPEG_TMP" /usr/local/bin/ffmpeg
         install -m 0755 "$FFPROBE_TMP" /usr/local/bin/ffprobe
 
+        ffmpeg -version > /dev/null 2>&1 || {
+            echo "ERROR: ffmpeg validation failed after installation"
+            exit 1
+        }
         ffprobe -version > /dev/null 2>&1 || {
-            echo "ERROR: ffmpeg installed but ffprobe check failed"
+            echo "ERROR: ffprobe validation failed after installation"
             exit 1
         }
 
-        rm -rf "$TMP_DIR"
-        trap - EXIT
         echo "ffmpeg installed successfully."
     fi
 else
