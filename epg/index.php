@@ -323,7 +323,7 @@ function liveFetchHandler($query_params) {
     }
 
     // 处理 TVG URL 替换
-    $tvgUrlToken = ($tokenRange == "2" || $tokenRange == "3") ? "&token=$token" : '';
+    $tvgUrlToken = ($tokenRange == "2" || $tokenRange == "3") ? "?token=$token" : '';
     $xmlPath = ($_SERVER['REWRITE_ENABLE'] ?? 0) ? '/t.xml.gz' : '/index.php?type=gz';
     $tvgUrl = $serverUrl . $xmlPath . $tvgUrlToken;
     if ($queryType === 'm3u') {
