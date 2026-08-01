@@ -619,13 +619,6 @@ body.dark .layui-btn-warm:hover {
     border-color: #ba7000;
 }
 
-body.dark .layui-input,
-body.dark .layui-textarea {
-    background-color: #333;
-    color: #e0e0e0;
-    border-color: #555;
-}
-
 body.dark #paginationContainer button {
     background-color: #1e1e1e;
     color: #aaa;
