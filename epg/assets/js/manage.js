@@ -2615,3 +2615,30 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e)
         document.body.classList.add(theme);
     }
 });
+function toggleSidebar(force) {
+    const shouldOpen = typeof force === 'boolean'
+        ? force
+        : !document.body.classList.contains('sidebar-open');
+    document.body.classList.toggle('sidebar-open', shouldOpen);
+}
+
+function scrollToSection(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (window.innerWidth <= 1100) {
+        toggleSidebar(false);
+    }
+}
+
+const sidebarToggle = document.getElementById('sidebarToggle');
+if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => toggleSidebar());
+}
+
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 1100) {
+        toggleSidebar(false);
+    }
+});

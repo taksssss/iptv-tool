@@ -22,127 +22,252 @@
     }
 })();
 </script>
-<div class="container">
-    <div>
-        <input type="checkbox" class="checkbox" id="themeSwitcher">
-        <label for="themeSwitcher" class="checkbox-label">
-            <i id="themeIcon"></i>
-            <span class="label-text"></span>
-            <span class="ball"></span>
-        </label>
-        <script>
-            const theme = localStorage.getItem('theme');
-            document.getElementById("themeIcon").className = `fas ${theme === 'dark' ? 'fa-moon' : theme === 'light' ? 'fa-sun' : 'fa-adjust'}`;
-            document.querySelector('.label-text').textContent = (theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto');
-        </script>
-    </div>
-    <h2>管理配置</h2>
-    <form method="POST" id="settingsForm" class="layui-form" lay-filter="settingsForm">
-        <label for="xml_urls">【EPG地址】</label>
-        <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">频道指定源</span>
-        <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">【停用/启用】</span>
-        <br><br>
-        <textarea id="xml_urls" name="xml_urls" class="layui-textarea"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
-        <br><br>
-
-        <div class="flex-container">
-            <div class="flex-item" style="width: 100%;">
-                <label>【频道别名】</label>
-                <span class="blue-span" id="channelInfi" onclick="showModal('channel')">频道管理</span>
-                <span class="blue-span" id="iconInfo" onclick="showModal('icon')">台标管理</span>
-                <span class="blue-span" id="liveInfo" onclick="showModal('live')">直播源管理</span>
-                <br><br>
-                <textarea id="channel_mappings" name="channel_mappings" class="layui-textarea"><?php 
-                    echo implode("\n", array_map(function($search, $replace) {
-                        return $search . ' => ' . $replace;
-                    }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
-                ?></textarea>
+<div class="app-shell">
+    <aside class="app-sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="fas fa-satellite-dish"></i></div>
+            <div>
+                <strong>IPTV工具箱</strong>
+                <span>全端管理控制台</span>
             </div>
         </div>
-        <br>
+        <nav class="sidebar-nav">
+            <button type="button" class="nav-item active" onclick="scrollToSection('overviewSection')">
+                <i class="fas fa-th-large"></i>
+                <span>总览</span>
+            </button>
+            <button type="button" class="nav-item" onclick="scrollToSection('sourceSection')">
+                <i class="fas fa-link"></i>
+                <span>EPG地址</span>
+            </button>
+            <button type="button" class="nav-item" onclick="scrollToSection('channelSection')">
+                <i class="fas fa-tv"></i>
+                <span>频道别名</span>
+            </button>
+            <button type="button" class="nav-item" onclick="scrollToSection('scheduleSection')">
+                <i class="fas fa-clock"></i>
+                <span>定时计划</span>
+            </button>
+            <button type="button" class="nav-item" onclick="scrollToSection('actionSection')">
+                <i class="fas fa-bolt"></i>
+                <span>快捷操作</span>
+            </button>
+            <button type="button" class="nav-item" onclick="showModal('channel')">
+                <i class="fas fa-list"></i>
+                <span>频道管理</span>
+            </button>
+            <button type="button" class="nav-item" onclick="showModal('icon')">
+                <i class="fas fa-image"></i>
+                <span>台标管理</span>
+            </button>
+            <button type="button" class="nav-item" onclick="showModal('live')">
+                <i class="fas fa-broadcast-tower"></i>
+                <span>直播源管理</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer-card">
+            <span>一体化入口</span>
+            <strong>配置、日志、数据管理</strong>
+            <button type="button" class="sidebar-footer-btn" onclick="showUrl()">查看接口地址</button>
+        </div>
+    </aside>
 
-        <div class="form-grid-container-single-row">
-            <div class="form-grid-item">
-                <label for="days_to_keep">【保存天数】</label>
-                <select id="days_to_keep" name="days_to_keep" required>
-                    <?php for ($i = 1; $i <= 30; $i++): ?>
-                        <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
-                            <?= $i; ?>
-                        </option>
-                    <?php endfor; ?>
-                </select>
-            </div>
+    <div class="app-overlay" onclick="toggleSidebar(false)"></div>
 
-            <div class="form-grid-item">
-                <label id="interval-task-label">【定时任务】</label>
-            </div>
-            
-            <div class="form-grid-item">
-                <label for="start_time">（开始时间）</label>
-                <input type="time" id="start_time" name="start_time" class="layui-input" value="<?= $Config['start_time']; ?>" required>
-            </div>
-        
-            <div class="form-grid-item">
-                <label for="end_time">（结束时间）</label>
-                <input type="time" id="end_time" name="end_time" class="layui-input" value="<?= $Config['end_time']; ?>" required>
-            </div>
-        
-            <div class="form-grid-item">
-                <label for="interval_hour">（间隔周期）</label>
-                <div class="interval-controls">
-                    <select id="interval_hour" name="interval_hour" required>
-                        <?php for ($h = 0; $h < 24; $h++): ?>
-                            <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
-                                <?= $h; ?>
-                            </option>
-                        <?php endfor; ?>
-                    </select>
-                    <span>小时</span>
-                    <select id="interval_minute" name="interval_minute" required>
-                        <?php for ($m = 0; $m < 60; $m++): ?>
-                            <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
-                                <?= $m; ?>
-                            </option>
-                        <?php endfor; ?>
-                    </select>
-                    <span>分钟</span>
+    <div class="app-main">
+        <header class="app-header">
+            <div class="header-left">
+                <button type="button" class="header-icon-btn" id="sidebarToggle" aria-label="切换菜单">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <div class="header-breadcrumb">首页 / 系统管理 / IPTV工具箱</div>
+                    <h1>管理控制台</h1>
                 </div>
             </div>
-        </div><br>
-        
-        <button id="update_config" name="update_config" type="submit" class="layui-btn layui-btn-fluid" value="1">保存配置</button>
-        <br><br>
-        <div class="button-container">
-            <button type="button" class="layui-btn layui-btn-sm" onclick="showExecResult('update.php')">更新数据</button>
-            <a class="layui-btn layui-btn-sm" href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
-            <a class="layui-btn layui-btn-sm" href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
-            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('cron')">定时日志</button>
-            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('update')">更新日志</button>
-            <button type="button" class="layui-btn layui-btn-sm" id="accessLogBtn" onclick="showAccessLogModal()" 
-                style="display: <?= ($Config['access_log_enable'] ?? 1) ? 'inline-block' : 'none'; ?>;">
-                访问日志
-            </button>
-            <button type="button" class="layui-btn layui-btn-sm" onclick="showUrl()">访问地址</button>
-            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('moresetting')">更多设置</button>
-            <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" name="logoutbtn" onclick="logout()">退出</button>
-        </div>
-    </form>
-</div>
+            <div class="header-actions">
+                <div>
+                    <input type="checkbox" class="checkbox" id="themeSwitcher">
+                    <label for="themeSwitcher" class="checkbox-label">
+                        <i id="themeIcon"></i>
+                        <span class="label-text"></span>
+                        <span class="ball"></span>
+                    </label>
+                    <script>
+                        const theme = localStorage.getItem('theme');
+                        document.getElementById("themeIcon").className = `fas ${theme === 'dark' ? 'fa-moon' : theme === 'light' ? 'fa-sun' : 'fa-adjust'}`;
+                        document.querySelector('.label-text').textContent = (theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto');
+                    </script>
+                </div>
+                <button type="button" class="header-icon-btn" onclick="showVersionLog()" aria-label="版本日志">
+                    <i class="fas fa-history"></i>
+                </button>
+                <button type="button" class="header-icon-btn" onclick="showHelpModal()" aria-label="使用说明">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+            </div>
+        </header>
 
-<!-- 底部显示 -->
-<div class="footer" style="user-select: none;">
-    <a id="url" href="https://github.com/taksssss/iptv-tool" target="_blank" style="text-decoration: none;">
-        https://github.com/taksssss/iptv-tool
-    </a>
-    <a onclick="showVersionLog();">
-        <span id="version">v20xx.xx.xx</span>
-        版本日志
-    </a>
-    <a onclick="showHelpModal();">使用说明</a>
-    <a onclick="showDonationImage();" style="color: red; font-weight: bold;">☕打赏赞助</a>
+        <main class="app-content">
+            <section class="overview-grid" id="overviewSection">
+                <article class="overview-card">
+                    <span>数据保留</span>
+                    <strong><?= $Config['days_to_keep']; ?> 天</strong>
+                    <p>按需管理节目单缓存与清理周期。</p>
+                </article>
+                <article class="overview-card">
+                    <span>定时任务</span>
+                    <strong><?= intval($Config['interval_time'] / 3600); ?>h <?= intval(($Config['interval_time'] % 3600) / 60); ?>m</strong>
+                    <p>开始 <?= $Config['start_time']; ?> · 结束 <?= $Config['end_time']; ?></p>
+                </article>
+                <article class="overview-card">
+                    <span>管理入口</span>
+                    <strong>桌面 / 移动双端适配</strong>
+                    <p>保持原有功能，升级为全屏后台布局。</p>
+                </article>
+            </section>
+
+            <div class="container">
+                <form method="POST" id="settingsForm" class="layui-form dashboard-form" lay-filter="settingsForm">
+                    <div class="dashboard-grid">
+                        <section class="panel-card panel-card-wide" id="sourceSection">
+                            <div class="panel-heading">
+                                <div>
+                                    <span class="panel-eyebrow">数据源配置</span>
+                                    <h2>EPG 地址</h2>
+                                    <p>集中管理节目单源，并快速切换启用状态。</p>
+                                </div>
+                                <div class="panel-links">
+                                    <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">频道指定源</span>
+                                    <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">停用 / 启用</span>
+                                </div>
+                            </div>
+                            <label class="field-label" for="xml_urls">节目单地址列表</label>
+                            <textarea id="xml_urls" name="xml_urls" class="layui-textarea"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
+                        </section>
+
+                        <section class="panel-card panel-card-wide" id="channelSection">
+                            <div class="panel-heading">
+                                <div>
+                                    <span class="panel-eyebrow">频道整理</span>
+                                    <h2>频道别名映射</h2>
+                                    <p>统一频道命名，并联动台标与直播源管理。</p>
+                                </div>
+                                <div class="panel-links">
+                                    <span class="blue-span" id="channelInfi" onclick="showModal('channel')">频道管理</span>
+                                    <span class="blue-span" id="iconInfo" onclick="showModal('icon')">台标管理</span>
+                                    <span class="blue-span" id="liveInfo" onclick="showModal('live')">直播源管理</span>
+                                </div>
+                            </div>
+                            <label class="field-label" for="channel_mappings">别名规则</label>
+                            <textarea id="channel_mappings" name="channel_mappings" class="layui-textarea"><?php 
+                                echo implode("\n", array_map(function($search, $replace) {
+                                    return $search . ' => ' . $replace;
+                                }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
+                            ?></textarea>
+                        </section>
+
+                        <section class="panel-card" id="scheduleSection">
+                            <div class="panel-heading compact">
+                                <div>
+                                    <span class="panel-eyebrow">任务编排</span>
+                                    <h2>保存与定时计划</h2>
+                                </div>
+                            </div>
+                            <div class="schedule-grid form-grid-container-single-row">
+                                <div class="form-grid-item">
+                                    <label for="days_to_keep">保存天数</label>
+                                    <select id="days_to_keep" name="days_to_keep" required>
+                                        <?php for ($i = 1; $i <= 30; $i++): ?>
+                                            <option value="<?= $i; ?>" <?= $Config['days_to_keep'] == $i ? 'selected' : ''; ?>>
+                                                <?= $i; ?>
+                                            </option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+
+                                <div class="form-grid-item form-grid-title-item">
+                                    <label id="interval-task-label">定时任务</label>
+                                </div>
+                                
+                                <div class="form-grid-item">
+                                    <label for="start_time">开始时间</label>
+                                    <input type="time" id="start_time" name="start_time" class="layui-input" value="<?= $Config['start_time']; ?>" required>
+                                </div>
+                            
+                                <div class="form-grid-item">
+                                    <label for="end_time">结束时间</label>
+                                    <input type="time" id="end_time" name="end_time" class="layui-input" value="<?= $Config['end_time']; ?>" required>
+                                </div>
+                            
+                                <div class="form-grid-item">
+                                    <label for="interval_hour">间隔周期</label>
+                                    <div class="interval-controls">
+                                        <select id="interval_hour" name="interval_hour" required>
+                                            <?php for ($h = 0; $h < 24; $h++): ?>
+                                                <option value="<?= $h; ?>" <?= floor($Config['interval_time'] / 3600) == $h ? 'selected' : ''; ?>>
+                                                    <?= $h; ?>
+                                                </option>
+                                            <?php endfor; ?>
+                                        </select>
+                                        <span>小时</span>
+                                        <select id="interval_minute" name="interval_minute" required>
+                                            <?php for ($m = 0; $m < 60; $m++): ?>
+                                                <option value="<?= $m; ?>" <?= (intval($Config['interval_time']) % 3600) / 60 == $m ? 'selected' : ''; ?>>
+                                                    <?= $m; ?>
+                                                </option>
+                                            <?php endfor; ?>
+                                        </select>
+                                        <span>分钟</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="update_config" name="update_config" type="submit" class="layui-btn layui-btn-fluid primary-submit" value="1">保存配置</button>
+                        </section>
+
+                        <section class="panel-card" id="actionSection">
+                            <div class="panel-heading compact">
+                                <div>
+                                    <span class="panel-eyebrow">常用入口</span>
+                                    <h2>快捷操作</h2>
+                                </div>
+                            </div>
+                            <div class="button-container toolbar-actions">
+                                <button type="button" class="layui-btn layui-btn-sm" onclick="showExecResult('update.php')">更新数据</button>
+                                <a class="layui-btn layui-btn-sm" href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
+                                <a class="layui-btn layui-btn-sm" href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
+                                <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('cron')">定时日志</button>
+                                <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('update')">更新日志</button>
+                                <button type="button" class="layui-btn layui-btn-sm" id="accessLogBtn" onclick="showAccessLogModal()" 
+                                    style="display: <?= ($Config['access_log_enable'] ?? 1) ? 'inline-block' : 'none'; ?>;">
+                                    访问日志
+                                </button>
+                                <button type="button" class="layui-btn layui-btn-sm" onclick="showUrl()">访问地址</button>
+                                <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('moresetting')">更多设置</button>
+                                <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" name="logoutbtn" onclick="logout()">退出</button>
+                            </div>
+                        </section>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <div class="footer" style="user-select: none;">
+            <a id="url" href="https://github.com/taksssss/iptv-tool" target="_blank" style="text-decoration: none;">
+                https://github.com/taksssss/iptv-tool
+            </a>
+            <a onclick="showVersionLog();">
+                <span id="version">v20xx.xx.xx</span>
+                版本日志
+            </a>
+            <a onclick="showHelpModal();">使用说明</a>
+            <a onclick="showDonationImage();" style="color: red; font-weight: bold;">☕打赏赞助</a>
+        </div>
+    </div>
 </div>
 
 <!-- 消息模态框 -->
+
 <div id="messageModal" class="modal">
     <div class="modal-content message-modal-content">
         <span class="close" style="position: absolute; top: 0px; right: 10px;">&times;</span>
