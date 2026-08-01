@@ -1,5 +1,12 @@
 // 页面加载时预加载数据，减少等待时间
 document.addEventListener('DOMContentLoaded', function() {
+    // 初始化 layui
+    layui.use(['layer', 'form'], function() {
+        window._layer = layui.layer;
+        window._form = layui.form;
+        layui.form.render();
+    });
+
     // 新用户弹出使用说明
     if (!localStorage.getItem('hasVisitedBefore') && 
         (!document.getElementById('xml_urls')?.value.trim())) {
@@ -801,8 +808,8 @@ function renderTableRow({ ip, counts, total, deny }) {
             <td>${deny}</td>
             <td>${total}</td>
             <td>
-                <button onclick="addIp('${ip}','black')" style="width: 30px; padding: 1px;">黑</button>
-                <button onclick="addIp('${ip}','white')" style="width: 30px; padding: 1px;">白</button>
+                <button class="layui-btn layui-btn-xs" onclick="addIp('${ip}','black')" style="padding: 0 8px;">黑</button>
+                <button class="layui-btn layui-btn-xs layui-btn-warm" onclick="addIp('${ip}','white')" style="padding: 0 8px;">白</button>
             </td>
         </tr>
     `;
@@ -1606,11 +1613,11 @@ function openLiveSourceConfigDialog(isNew = 0) {
     document.getElementById('messageModalMessage').innerHTML = `
         <div style="width: 180px;">
             <h3>${isNew ? '新建配置' : '另存为新配置'}</h3>
-            <input type="text" value="" id="newConfigName" placeholder="请输入配置名"
+            <input type="text" class="layui-input" value="" id="newConfigName" placeholder="请输入配置名"
                 style="text-align: center; font-size: 15px; margin-bottom: 15px;" />
             <div class="button-container button-container-source-setting" style="text-align: center; margin-bottom: -10px;">
-                <button id="confirmBtn">确认</button>
-                <button onclick="document.getElementById('messageModal').style.display='none'">取消</button>
+                <button id="confirmBtn" class="layui-btn layui-btn-sm layui-btn-warm">确认</button>
+                <button class="layui-btn layui-btn-sm" onclick="document.getElementById('messageModal').style.display='none'">取消</button>
             </div>
         </div>
     `;
@@ -1664,8 +1671,8 @@ function deleteSource() {
             <h3>确认删除</h3>
             <p>确定删除配置 "${configName}"？此操作不可恢复。</p>
             <div class="button-container button-container-source-setting">
-                <button id="confirmBtn">确认</button>
-                <button id="cancelBtn">取消</button>
+                <button id="confirmBtn" class="layui-btn layui-btn-sm layui-btn-danger">确认</button>
+                <button id="cancelBtn" class="layui-btn layui-btn-sm">取消</button>
             </div>
         </div>
     `;
@@ -1949,7 +1956,7 @@ function filterChannels(type) {
             <td></td>
             <td>
                 <input type="file" accept="image/png" style="display:none;" id="icon_new_${itemIndex}">
-                <button onclick="document.getElementById('icon_new_${itemIndex}').click()" style="font-size: 14px; width: 50px;">上传</button>
+                <button class="layui-btn layui-btn-xs" onclick="document.getElementById('icon_new_${itemIndex}').click()">上传</button>
             </td>
         `;
         
@@ -2003,7 +2010,7 @@ function filterChannels(type) {
                     <td>${item.icon ? `<a href="${item.icon}" target="_blank"><img loading="lazy" src="${item.icon}" style="max-width: 80px; max-height: 50px; background-color: #ccc;"></a>` : ''}</td>
                     <td>
                         <input type="file" accept="image/png" style="display:none;" id="file_${index}">
-                        <button onclick="document.getElementById('file_${index}').click()" style="font-size: 14px; width: 50px;">上传</button>
+                        <button class="layui-btn layui-btn-xs" onclick="document.getElementById('file_${index}').click()">上传</button>
                     </td>
                 `;
                 row.querySelectorAll('td[contenteditable]').forEach((cell, idx) => {
@@ -2355,8 +2362,8 @@ async function changeTokenUA(type) {
         document.getElementById('messageModalMessage').innerHTML = `
             <div class="modal-inner" style="width: 450px;">
                 <h3>修改 ${typeStr}</h3>
-                <textarea id="newTokenUA" style="min-height: 250px; margin-bottom: 15px;">${currentTokenUA}</textarea>
-                <button onclick="updateTokenUA('${type}')" style="margin-bottom: -10px;">确认</button>
+                <textarea id="newTokenUA" class="layui-textarea" style="min-height: 250px; margin-bottom: 15px;">${currentTokenUA}</textarea>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="updateTokenUA('${type}')" style="margin-bottom: -10px;">确认</button>
             </div>
         `;
     } catch (err) {
@@ -2437,10 +2444,10 @@ async function changeProxyUrl() {
             <div class="modal-inner" style="width: auto;">
                 <h3>代理地址</h3>
                 <div>示例：http://127.0.0.1:7890、socks5://user:pass@127.0.0.1:1080</div>
-                <input type="text" id="newProxyUrl" value="${currentProxyUrl}" style="margin-top: 20px; margin-bottom: 20px; width: 100%; box-sizing: border-box;"/>
+                <input type="text" class="layui-input" id="newProxyUrl" value="${currentProxyUrl}" style="margin-top: 20px; margin-bottom: 20px; width: 100%; box-sizing: border-box;"/>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: -10px;">
-                    <button id="testProxyBtn" onclick="testProxyConnection()">测试连接</button>
-                    <button onclick="saveConfigField({ proxy_url: document.getElementById('newProxyUrl').value.trim() }, true)">确认</button>
+                    <button id="testProxyBtn" class="layui-btn layui-btn-sm" onclick="testProxyConnection()">测试连接</button>
+                    <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="saveConfigField({ proxy_url: document.getElementById('newProxyUrl').value.trim() }, true)">确认</button>
                 </div>
             </div>
         `;
@@ -2502,8 +2509,8 @@ async function changeNotifyInfo() {
                 <h3>Sendkey</h3>
                 <div>同时支持 <a href="https://sct.ftqq.com/r/15503" target="_blank">Server酱ᵀ</a>（免费5次/天）
 						与 <a href="https://sc3.ft07.com/" target="_blank">Server酱³</a>（公测不限次）</div>
-                <input type="text" id="newSCKey" value="${currentSCKey}" style="margin-top: 20px; margin-bottom: 20px;"/>
-                <button onclick="saveConfigField({ serverchan_key: document.getElementById('newSCKey').value.trim() }, true)" style="margin-bottom: -10px;">确认</button>
+                <input type="text" class="layui-input" id="newSCKey" value="${currentSCKey}" style="margin-top: 20px; margin-bottom: 20px;"/>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="saveConfigField({ serverchan_key: document.getElementById('newSCKey').value.trim() }, true)" style="margin-bottom: -10px;">确认</button>
             </div>
         `;
     } catch (err) {
@@ -2536,8 +2543,8 @@ async function changeCheckSpeedFilterRules() {
                     正则表达式：以 regex: 开头（内置 IPv6 过滤规则）<br>
                     使用 <code>#</code> 开头可临时停用该行规则
                 </div>
-                <textarea id="newCheckSpeedFilterRules" style="min-height: 200px; margin-bottom: 15px;">${currentRules}</textarea>
-                <button onclick="updateCheckSpeedFilterRules()" style="margin-bottom: -10px;">确认</button>
+                <textarea id="newCheckSpeedFilterRules" class="layui-textarea" style="min-height: 200px; margin-bottom: 15px;">${currentRules}</textarea>
+                <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="updateCheckSpeedFilterRules()" style="margin-bottom: -10px;">确认</button>
             </div>
         `;
     } catch (err) {

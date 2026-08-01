@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="assets/css/manage.css">
     <link rel="stylesheet" type="text/css" href="assets/css/fa-5-15-4-all-min.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.min.css">
 </head>
 <body>
 <script>
@@ -36,12 +37,12 @@
         </script>
     </div>
     <h2>管理配置</h2>
-    <form method="POST" id="settingsForm">
+    <form method="POST" id="settingsForm" class="layui-form" lay-filter="settingsForm">
         <label for="xml_urls">【EPG地址】</label>
         <span class="blue-span" id="channelbind" onclick="showModal('channelbindepg')">频道指定源</span>
         <span class="blue-span" id="mobileComment_epg" onclick="commentAll('xml_urls')">【停用/启用】</span>
         <br><br>
-        <textarea id="xml_urls" name="xml_urls"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
+        <textarea id="xml_urls" name="xml_urls" class="layui-textarea"><?= implode("\n", array_map('trim', $Config['xml_urls'])); ?></textarea>
         <br><br>
 
         <div class="flex-container">
@@ -51,7 +52,7 @@
                 <span class="blue-span" id="iconInfo" onclick="showModal('icon')">台标管理</span>
                 <span class="blue-span" id="liveInfo" onclick="showModal('live')">直播源管理</span>
                 <br><br>
-                <textarea id="channel_mappings" name="channel_mappings"><?php 
+                <textarea id="channel_mappings" name="channel_mappings" class="layui-textarea"><?php 
                     echo implode("\n", array_map(function($search, $replace) {
                         return $search . ' => ' . $replace;
                     }, array_keys($Config['channel_mappings']), $Config['channel_mappings']));
@@ -78,12 +79,12 @@
             
             <div class="form-grid-item">
                 <label for="start_time">（开始时间）</label>
-                <input type="time" id="start_time" name="start_time" value="<?= $Config['start_time']; ?>" required>
+                <input type="time" id="start_time" name="start_time" class="layui-input" value="<?= $Config['start_time']; ?>" required>
             </div>
         
             <div class="form-grid-item">
                 <label for="end_time">（结束时间）</label>
-                <input type="time" id="end_time" name="end_time" value="<?= $Config['end_time']; ?>" required>
+                <input type="time" id="end_time" name="end_time" class="layui-input" value="<?= $Config['end_time']; ?>" required>
             </div>
         
             <div class="form-grid-item">
@@ -109,21 +110,21 @@
             </div>
         </div><br>
         
-        <input id="update_config" name="update_config" type="submit" value="保存配置">
+        <button id="update_config" name="update_config" type="submit" class="layui-btn layui-btn-fluid" value="1">保存配置</button>
         <br><br>
         <div class="button-container">
-            <button type="button" onclick="showExecResult('update.php')">更新数据</button>
-            <a href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
-            <a href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
-            <button type="button" onclick="showModal('cron')">定时日志</button>
-            <button type="button" onclick="showModal('update')">更新日志</button>
-            <button type="button" id="accessLogBtn" onclick="showAccessLogModal()" 
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showExecResult('update.php')">更新数据</button>
+            <a class="layui-btn layui-btn-sm" href="assets/phpliteadmin.php" target="_blank" onclick="return handleDbManagement();">管理数据</a>
+            <a class="layui-btn layui-btn-sm" href="assets/tinyfilemanager/index.php" target="_blank">管理文件</a>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('cron')">定时日志</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('update')">更新日志</button>
+            <button type="button" class="layui-btn layui-btn-sm" id="accessLogBtn" onclick="showAccessLogModal()" 
                 style="display: <?= ($Config['access_log_enable'] ?? 1) ? 'inline-block' : 'none'; ?>;">
                 访问日志
             </button>
-            <button type="button" onclick="showUrl()">访问地址</button>
-            <button type="button" onclick="showModal('moresetting')">更多设置</button>
-            <button type="button" name="logoutbtn" onclick="logout()">退出</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showUrl()">访问地址</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showModal('moresetting')">更多设置</button>
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" name="logoutbtn" onclick="logout()">退出</button>
         </div>
     </form>
 </div>
@@ -178,7 +179,7 @@
         <span class="blue-span" id="prevDate" style="margin-left: 10px;">&#9664; 前一天</span>
         <span class="blue-span" id="nextDate" style="margin-left: 10px;">后一天 &#9654;</span>
         <br><br>
-        <textarea id="epgContent" readonly style="width: 100%; height: 380px;"></textarea>
+        <textarea id="epgContent" readonly class="layui-textarea" style="width: 100%; height: 380px;"></textarea>
     </div>
 </div>
 
@@ -208,7 +209,7 @@
     <div class="modal-content cron-log-modal-content">
         <span class="close">&times;</span>
         <h2>定时任务日志</h2>
-        <textarea id="cronLogContent" readonly style="height: 458px; resize: none;"></textarea>
+        <textarea id="cronLogContent" readonly class="layui-textarea" style="height: 458px; resize: none;"></textarea>
     </div>
 </div>
 
@@ -219,10 +220,10 @@
         <h2>访问日志</h2>
         <p id="accessLogContent" style="height: 413px; overflow: auto; line-height: 1.5;"></p>
         <div class="button-container button-container-access-stats">
-            <button type="button" onclick="showAccessStats()">访问统计</button>
-            <button type="button" onclick="showAccessStats(sourceOnly=1)">直播访问统计</button>
-            <button type="button" onclick="clearAccessLog()">清空日志</button>
-            <button type="button" onclick="downloadAccessLog()">下载日志</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showAccessStats()">访问统计</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="showAccessStats(sourceOnly=1)">直播访问统计</button>
+            <button type="button" class="layui-btn layui-btn-sm layui-btn-warm" onclick="clearAccessLog()">清空日志</button>
+            <button type="button" class="layui-btn layui-btn-sm" onclick="downloadAccessLog()">下载日志</button>
         </div>
     </div>
 </div>
@@ -246,9 +247,9 @@
     <div class="modal-content ip-modal-content">
         <span class="close">&times;</span>
         <h2>IP 列表</h2>
-        <textarea id="ipListTextarea" style="width:100%; height:415px;"></textarea>
+        <textarea id="ipListTextarea" class="layui-textarea" style="width:100%; height:415px;"></textarea>
         <div style="text-align: right; margin-top: 10px;">
-            <button onclick="saveIpList()">保存</button>
+            <button class="layui-btn layui-btn-sm layui-btn-warm" onclick="saveIpList()">保存</button>
         </div>
     </div>
 </div>
@@ -258,7 +259,7 @@
     <div class="modal-content channel-modal-content">
         <span class="close">&times;</span>
         <h2 id="channelModalTitle">频道列表</h2>
-        <input type="text" id="channelSearchInput" placeholder="搜索频道名..." oninput="filterChannels('channel')">
+        <input type="text" class="layui-input" id="channelSearchInput" placeholder="搜索频道名..." oninput="filterChannels('channel')">
         <div class="table-container" id="channel-table-container">
             <table id="channelTable">
                 <thead style="position: sticky; top: 0; background-color: white;">
@@ -273,7 +274,7 @@
             </table>
         </div>
         <br>
-        <button id="saveConfig" type="button" onclick="updateChannelMapping();">保存配置</button>
+        <button id="saveConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateChannelMapping();">保存配置</button>
     </div>
 </div>
 
@@ -283,15 +284,15 @@
         <span class="close">&times;</span>
         <h2 id="iconModalTitle">频道列表</h2>
         <div style="display: flex;">
-            <input type="text" id="iconSearchInput" placeholder="搜索频道名..." oninput="filterChannels('icon')" style="flex: 1; margin-right: 10px;">
+            <input type="text" class="layui-input" id="iconSearchInput" placeholder="搜索频道名..." oninput="filterChannels('icon')" style="flex: 1; margin-right: 10px;">
             <div style="width:auto; margin-right: 10px;">
-                <button id="deleteUnusedIcons" type="button" onclick="deleteUnusedIcons()">清理</button>
+                <button id="deleteUnusedIcons" type="button" class="layui-btn layui-btn-sm" onclick="deleteUnusedIcons()">清理</button>
             </div>
             <div style="width:auto; margin-right: 10px;">
-                <button id="showAllIcons" type="button" onclick="showModal('allicon')">全显</button>
+                <button id="showAllIcons" type="button" class="layui-btn layui-btn-sm" onclick="showModal('allicon')">全显</button>
             </div>
             <div style="width:auto;">
-                <button id="uploadAllIcons" type="button" onclick="uploadAllIcons();">转存</button>
+                <button id="uploadAllIcons" type="button" class="layui-btn layui-btn-sm" onclick="uploadAllIcons();">转存</button>
             </div>
         </div>
         <div class="table-container" id="icon-table-container">
@@ -310,7 +311,7 @@
             </table>
         </div>
         <br>
-        <button id="saveConfig" type="button" onclick="updateIconListJsonFile(notify = true);">保存配置</button>
+        <button id="saveConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateIconListJsonFile(notify = true);">保存配置</button>
     </div>
 </div>
 
@@ -333,7 +334,7 @@
             </table>
         </div>
         <br>
-        <button id="saveConfig" type="button" onclick="updateConfig();">保存配置</button>
+        <button id="saveConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateConfig();">保存配置</button>
     </div>
 </div>
 
@@ -365,12 +366,12 @@
     <div class="modal-content mysql-config-modal-content" style="width:275px">
         <span class="close">&times;</span>
         <h2>MySQL 配置</h2><br>
-        <div><label>地址：<input type="text" id="mysql_host" value="<?= $Config['mysql']['host'] ?? ''; ?>" style="width:200px"></label></div>
-        <div><label>库名：<input type="text" id="mysql_dbname" value="<?= $Config['mysql']['dbname'] ?? ''; ?>" style="width:200px"></label></div>
-        <div><label>用户：<input type="text" id="mysql_username" value="<?= $Config['mysql']['username'] ?? ''; ?>" style="width:200px"></label></div>
-        <div><label>密码：<input type="text" id="mysql_password" value="<?= $Config['mysql']['password'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>地址：<input type="text" class="layui-input" id="mysql_host" value="<?= $Config['mysql']['host'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>库名：<input type="text" class="layui-input" id="mysql_dbname" value="<?= $Config['mysql']['dbname'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>用户：<input type="text" class="layui-input" id="mysql_username" value="<?= $Config['mysql']['username'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>密码：<input type="text" class="layui-input" id="mysql_password" value="<?= $Config['mysql']['password'] ?? ''; ?>" style="width:200px"></label></div>
         <br>
-        <div><button type="button" onclick="mysqlConfigModal.style.display='none';updateConfig()">保存配置</button></div>
+        <div><button type="button" class="layui-btn layui-btn-sm layui-btn-warm" onclick="mysqlConfigModal.style.display='none';updateConfig()">保存配置</button></div>
     </div>
 </div>
 
@@ -379,11 +380,11 @@
     <div class="modal-content redis-config-modal-content" style="width:275px">
         <span class="close">&times;</span>
         <h2>Redis 配置</h2><br>
-        <div><label>地址：<input type="text" id="redis_host" placeholder="127.0.0.1" value="<?= $Config['redis']['host'] ?? ''; ?>" style="width:200px"></label></div>
-        <div><label>端口：<input type="text" id="redis_port" placeholder="6379" value="<?= $Config['redis']['port'] ?? ''; ?>" style="width:200px"></label></div>
-        <div><label>密码：<input type="text" id="redis_password" value="<?= $Config['redis']['password'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>地址：<input type="text" class="layui-input" id="redis_host" placeholder="127.0.0.1" value="<?= $Config['redis']['host'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>端口：<input type="text" class="layui-input" id="redis_port" placeholder="6379" value="<?= $Config['redis']['port'] ?? ''; ?>" style="width:200px"></label></div>
+        <div><label>密码：<input type="text" class="layui-input" id="redis_password" value="<?= $Config['redis']['password'] ?? ''; ?>" style="width:200px"></label></div>
         <br>
-        <div><button type="button" onclick="redisConfigModal.style.display='none';saveAndTestRedisConfig()">保存配置</button></div>
+        <div><button type="button" class="layui-btn layui-btn-sm layui-btn-warm" onclick="redisConfigModal.style.display='none';saveAndTestRedisConfig()">保存配置</button></div>
     </div>
 </div>
 
@@ -402,26 +403,26 @@
             <span class="blue-span" onclick="openLiveSourceConfigDialog(false)">另存</span>
             <span class="blue-span" onclick="deleteSource()">删除</span>
             <span class="blue-span" id="mobileComment_source" onclick="commentAll('sourceUrlTextarea')">【停用/启用】</span>
-            <br><textarea id="sourceUrlTextarea"></textarea>
+            <br><textarea id="sourceUrlTextarea" class="layui-textarea"></textarea>
         </div>
         <br>
         
         <!-- 中间按钮区 -->
         <div class="button-container"  style="width: 75%;">
             <input type="file" name="liveSourceFile" id="liveSourceFile" style="display: none;" accept=".m3u, .txt">
-            <button id="uploadSourceBtn" onclick="document.getElementById('liveSourceFile').click()">上传源</button>
-            <button id="parseSourceInfoBtn" onclick="parseSourceInfo()">解析源</button>
-            <button id="showLiveUrlBtn" onclick="showUrl('live')">访问地址</button>
-            <button id="showLiveTemplateBtn" onclick="showLiveTemplate()">源模板</button>
-            <button id="checkSourceBtn" onclick="showModal('chekspeed')">测速校验</button>
-            <button id="saveSourceBtn" onclick="saveLiveSourceInfo()">保存</button>
-            <button id="showMoreLiveSettingBtn" onclick="showModal('morelivesetting')">更多设置</button>
+            <button id="uploadSourceBtn" class="layui-btn layui-btn-sm" onclick="document.getElementById('liveSourceFile').click()">上传源</button>
+            <button id="parseSourceInfoBtn" class="layui-btn layui-btn-sm" onclick="parseSourceInfo()">解析源</button>
+            <button id="showLiveUrlBtn" class="layui-btn layui-btn-sm" onclick="showUrl('live')">访问地址</button>
+            <button id="showLiveTemplateBtn" class="layui-btn layui-btn-sm" onclick="showLiveTemplate()">源模板</button>
+            <button id="checkSourceBtn" class="layui-btn layui-btn-sm" onclick="showModal('chekspeed')">测速校验</button>
+            <button id="saveSourceBtn" class="layui-btn layui-btn-sm layui-btn-warm" onclick="saveLiveSourceInfo()">保存</button>
+            <button id="showMoreLiveSettingBtn" class="layui-btn layui-btn-sm" onclick="showModal('morelivesetting')">更多设置</button>
         </div>
         <br>
 
         <!-- 搜索框 -->
         <div>
-            <input type="text" id="liveSourceSearchInput" placeholder="搜索分组前缀、分组名称、频道名称、直播地址、tvg-id、tvg-name...">
+            <input type="text" class="layui-input" id="liveSourceSearchInput" placeholder="搜索分组前缀、分组名称、频道名称、直播地址、tvg-id、tvg-name...">
         </div>
 
         <!-- 表格显示解析结果 -->
@@ -488,7 +489,7 @@
     <div class="modal-content live-template-modal-content">
         <span class="close">&times;</span>
         <h2>直播源模板<span style="font-size: 14px;">（生成直播源文件时仅包含以下数据）</span></h2>
-        <textarea id="liveTemplateTextarea" placeholder="#分组1&#10;频道1, 频道2&#10;频道3, 频道4&#10;&#10;#分组2&#10;&#10;#分组3, 来源1, 来源2&#10;&#10;#default, 来源3, 来源4&#10;&#10;..."
+        <textarea id="liveTemplateTextarea" class="layui-textarea" placeholder="#分组1&#10;频道1, 频道2&#10;频道3, 频道4&#10;&#10;#分组2&#10;&#10;#分组3, 来源1, 来源2&#10;&#10;#default, 来源3, 来源4&#10;&#10;..."
             style="width: 100%; height: 350px;"></textarea><br>
         <div class="row" style="margin-top: 15px; margin-bottom: 15px;">
             <div class="column">
@@ -515,7 +516,7 @@
             <div class="column">
             </div>
         </div>
-        <button id="saveConfig" type="button" onclick="saveLiveTemplate();">保存配置</button>
+        <button id="saveConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="saveLiveTemplate();">保存配置</button>
     </div>
 </div>
 
@@ -542,10 +543,10 @@
             </div>
             <div class="column" style="display: flex; align-items: center;">
                 <label>最低分辨率：</label>
-                <input type="tel" id="min_resolution_width" placeholder="宽度" style="text-align: center;" 
+                <input type="tel" id="min_resolution_width" class="layui-input" placeholder="宽度" style="text-align: center;" 
                     value="<?= $Config['min_resolution_width'] ?? 0; ?>">
                 <span>×</span>
-                <input type="tel" id="min_resolution_height" placeholder="高度" style="text-align: center;" 
+                <input type="tel" id="min_resolution_height" class="layui-input" placeholder="高度" style="text-align: center;" 
                     value="<?= $Config['min_resolution_height'] ?? 0; ?>">
             </div>
         </div>
@@ -554,7 +555,7 @@
         <div class="row">
             <div class="column" style="display: flex; align-items: center;">
                 <label for="urls_limit">单频道接口数量：</label>
-                <input type="tel" id="urls_limit" placeholder="默认不限制" style="text-align: center;" 
+                <input type="tel" id="urls_limit" class="layui-input" placeholder="默认不限制" style="text-align: center;" 
                     value="<?= $Config['urls_limit'] ?? 0; ?>">
             </div>
             <div class="column">
@@ -589,10 +590,10 @@
 
         <!-- 第四行 -->
         <div class="button-container button-container-check-speed" style="margin-top: 25px;">
-            <button id="foregroundCheckBtn" onclick="showExecResult('check.php', () => showModal('live', popup = false))">前台测速</button>
-            <button id="backgroundCheckBtn" onclick="showExecResult('check.php?backgroundMode=1', () => showModal('live', popup = false), fullSize = false)">后台测速</button>
-            <button id="cleanCheckResultBtn" onclick="showExecResult('check.php?cleanMode=1', () => showModal('live', popup = false), fullSize = false)">清除结果</button>
-            <button id="saveConfig" onclick="updateConfig()">保存配置</button>
+            <button id="foregroundCheckBtn" class="layui-btn layui-btn-sm" onclick="showExecResult('check.php', () => showModal('live', popup = false))">前台测速</button>
+            <button id="backgroundCheckBtn" class="layui-btn layui-btn-sm" onclick="showExecResult('check.php?backgroundMode=1', () => showModal('live', popup = false), fullSize = false)">后台测速</button>
+            <button id="cleanCheckResultBtn" class="layui-btn layui-btn-sm layui-btn-warm" onclick="showExecResult('check.php?cleanMode=1', () => showModal('live', popup = false), fullSize = false)">清除结果</button>
+            <button id="saveConfig" class="layui-btn layui-btn-sm layui-btn-warm" onclick="updateConfig()">保存配置</button>
         </div>
     </div>
 </div>
@@ -674,8 +675,8 @@
 
         <!-- 第五行 -->
         <div class="button-container button-container-source-setting" style="margin-top: 25px;">
-            <button id="cleanUnusedSourceBtn" onclick="cleanUnusedSource()">清理缓存数据</button>
-            <button id="saveConfig" onclick="updateConfig()">保存配置</button>
+            <button id="cleanUnusedSourceBtn" class="layui-btn layui-btn-sm layui-btn-warm" onclick="cleanUnusedSource()">清理缓存数据</button>
+            <button id="saveConfig" class="layui-btn layui-btn-sm layui-btn-warm" onclick="updateConfig()">保存配置</button>
         </div>
     </div>
 </div>
@@ -880,11 +881,12 @@
             <span class="blue-span" onclick="showModal('channelmatch')">查看匹配</span>）
         </span>
         <br>
-        <textarea id="gen_list_text" style="margin-top: 12px; margin-bottom: 12px;"></textarea><br>
+        <textarea id="gen_list_text" class="layui-textarea" style="margin-top: 12px; margin-bottom: 12px;"></textarea><br>
 
-        <button id="saveConfig" type="button" onclick="setGenListAndUpdateConfig();">保存配置</button>
+        <button id="saveConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="setGenListAndUpdateConfig();">保存配置</button>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.min.js"></script>
 <script src="assets/js/manage.js"></script>
 </body>
 </html>

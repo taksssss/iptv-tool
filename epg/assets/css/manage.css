@@ -144,66 +144,7 @@ a:hover, .blue-span:hover {
     justify-content: space-between;
 }
 
-.button-container a, .button-container button,
-.modal-content button, input[type="submit"] {
-    padding: 10px;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    text-align: center;
-    cursor: pointer;
-    box-sizing: border-box;
-    align-items: center;
-    width: 100%;
-    font-size: 16px;
-    font-weight: bold;
-}
 
-.button-container a:hover, .button-container button:hover,
-input[type="submit"]:hover, #accessStatsTable th:hover {
-    background-color: #0b7dda;
-}
-
-input[type="submit"],
-.button-container button[name="logoutbtn"],
-.modal-content button {
-    background-color: #FF9800;
-    border-radius: 5px;
-}
-
-input[type="submit"]:hover,
-.button-container button[name="logoutbtn"]:hover,
-.modal-content button:hover {
-    background-color: #e68900;
-}
-
-button[id="deleteUnusedIcons"], button[id="uploadAllIcons"], 
-button[id="showAllIcons"] {
-    display: flex;
-    height: 36px;
-}
-
-.button-container button[name="logoutbtn"] {
-    border-radius: 10px;
-    width: 500px;
-}
-
-input[type="text"],
-input[type="tel"] {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-input[type="tel"] {
-    padding: 0px;
-    height: 32px;
-    font-size: 15px;
-    margin-bottom: 0px;
-}
 
 .flex-container {
     display: flex;
@@ -654,30 +595,35 @@ body.dark .footer a {
     color: #ddd;
 }
 
-body.dark .button-container a,
-body.dark .button-container button,
+body.dark .layui-btn,
 body.dark #accessStatsTable th {
     background-color: #2d78b9;
+    border-color: #2d78b9;
     color: #e0e0e0;
 }
 
-body.dark .button-container a:hover,
-body.dark .button-container button:hover,
+body.dark .layui-btn:hover,
 body.dark #accessStatsTable th:hover {
     background-color: #1565c0;
+    border-color: #1565c0;
 }
 
-body.dark input[type="submit"],
-body.dark .button-container button[name="logoutbtn"],
-body.dark .modal-content button {
+body.dark .layui-btn-warm {
     background-color: #ce7c00;
+    border-color: #ce7c00;
     color: #e0e0e0;
 }
 
-body.dark input[type="submit"]:hover,
-body.dark .button-container button[name="logoutbtn"]:hover,
-body.dark .modal-content button:hover {
+body.dark .layui-btn-warm:hover {
     background-color: #ba7000;
+    border-color: #ba7000;
+}
+
+body.dark .layui-input,
+body.dark .layui-textarea {
+    background-color: #333;
+    color: #e0e0e0;
+    border-color: #555;
 }
 
 body.dark #paginationContainer button {

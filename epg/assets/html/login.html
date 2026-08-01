@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录</title>
     <link rel="stylesheet" type="text/css" href="assets/css/login.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.min.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -22,14 +23,14 @@
 </script>
 <div class="container">
     <h2>登录</h2>
-    <form method="POST">
+    <form method="POST" class="layui-form">
         <label for="password">管理密码：</label><br><br>
-        <input type="password" id="password" name="password"><br><br>
+        <input type="password" class="layui-input" id="password" name="password"><br><br>
         <input type="hidden" name="login" value="1">
-        <input type="submit" value="登录">
+        <input type="submit" class="layui-btn layui-btn-fluid layui-btn-warm" value="登录">
     </form>
-    <div class="button-container">
-        <button type="button" onclick="showChangePasswordForm()">更改密码</button>
+    <div class="button-container" style="margin-top: 8px;">
+        <button type="button" class="layui-btn layui-btn-sm layui-btn-fluid" onclick="showChangePasswordForm()">更改密码</button>
     </div>
     <?php if (!empty($error)) echo "<p style='color:red;'>$error</p>"; ?>
     <?php echo $passwordChangedMessage; ?>
@@ -52,19 +53,19 @@
             <?php if (empty($forceChangePassword)): ?>
             <div class="form-group">
                 <label for="old_password">原密码</label>
-                <input type="password" id="old_password" name="old_password">
+                <input type="password" class="layui-input" id="old_password" name="old_password">
             </div>
             <?php endif; ?>
             <div class="form-group">
                 <label for="new_password">新密码</label>
-                <input type="password" id="new_password" name="new_password">
+                <input type="password" class="layui-input" id="new_password" name="new_password">
             </div>
             <div class="form-group">
                 <label for="confirm_password">确　认</label>
-                <input type="password" id="confirm_password" name="confirm_password">
+                <input type="password" class="layui-input" id="confirm_password" name="confirm_password">
             </div>
             <input type="hidden" name="change_password" value="1">
-            <input type="submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>" style="margin-top: 15px;">
+            <input type="submit" class="layui-btn layui-btn-fluid layui-btn-warm" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>" style="margin-top: 15px;">
         </form>
     </div>
 </div>
@@ -99,5 +100,6 @@
 
     <?php if (!empty($forceChangePassword)) echo "showChangePasswordForm();"; ?>
 </script>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.min.js"></script>
 </body>
 </html>

@@ -14,39 +14,6 @@ body {
     border-radius: 5px;
     width: 200px;
 }
-input[type="password"] {
-    width: calc(100%);
-    flex: 1;
-    padding: 7px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
-}
-input[type="submit"],
-.button-container button {
-    width: 100%;
-    padding: 8px;
-    background-color: #FF9800;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    box-sizing: border-box;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-input[type="submit"]:hover {
-    background-color: #e68900;
-}
-.button-container button {
-    background-color: #2196F3;
-    margin-top: 5px;
-}
-.button-container button:hover {
-    background-color: #0b7dda;
-}
 .form-group {
     display: flex;
     align-items: center;
@@ -56,17 +23,12 @@ input[type="submit"]:hover {
     margin-right: 10px;
     margin-bottom: 10px;
 }
-.form-group input[type="password"] {
+.form-group .layui-input {
     flex: 1;
-    padding: 5px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
     margin-bottom: 10px;
 }
 .modal {
-    display: none; /* 默认隐藏 */
+    display: none;
     position: fixed;
     z-index: 1;
     left: 0;
@@ -122,26 +84,32 @@ body.dark .passwd-modal-content {
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-body.dark input[type="password"],
-body.dark .button-container button {
+body.dark .layui-input {
     background-color: #333;
     color: #e0e0e0;
-    border: 1px solid #555;
+    border-color: #555;
 }
 
-body.dark input[type="submit"] {
+body.dark .layui-btn-warm {
     background-color: #ce7c00;
+    border-color: #ce7c00;
     color: #e0e0e0;
 }
-body.dark input[type="submit"]:hover {
+
+body.dark .layui-btn-warm:hover {
     background-color: #ba7000;
+    border-color: #ba7000;
 }
 
-body.dark .button-container button {
+body.dark .layui-btn {
     background-color: #2d78b9;
+    border-color: #2d78b9;
+    color: #e0e0e0;
 }
-body.dark .button-container button:hover {
+
+body.dark .layui-btn:hover {
     background-color: #1565c0;
+    border-color: #1565c0;
 }
 
 body.dark .close:hover,
