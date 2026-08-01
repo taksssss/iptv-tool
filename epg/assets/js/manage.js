@@ -1,11 +1,13 @@
 // 页面加载时预加载数据，减少等待时间
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化 layui
-    layui.use(['layer', 'form'], function() {
-        window._layer = layui.layer;
-        window._form = layui.form;
-        layui.form.render();
-    });
+    if (window.layui) {
+        layui.use(['layer', 'form'], function() {
+            window._layer = layui.layer;
+            window._form = layui.form;
+            layui.form.render();
+        });
+    }
 
     // 新用户弹出使用说明
     if (!localStorage.getItem('hasVisitedBefore') && 
