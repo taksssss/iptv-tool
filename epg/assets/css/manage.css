@@ -251,15 +251,15 @@ a:hover, .blue-span:hover {
 
 .table-container[id="channel-table-container"],
 .table-container[id="icon-table-container"] {
-    height: 359px;
+    height: 400px;
 }
 
 .table-container[id="channel-bind-epg-table-container"] {
-    height: 399px;
+    height: 400px;
 }
 
 .table-container[id="channel-match-table-container"] {
-    height: 470px;
+    height: 460px;
 }
 
 .table-container[id="live-source-table-container"] {
@@ -270,7 +270,11 @@ a:hover, .blue-span:hover {
 }
 
 .table-container[id="access-stats-table-container"] {
-    height: 471px;
+    height: 460px;
+}
+
+.table-container[id="log-table-container"] {
+    height: 460px;
 }
 
 #logTable, #channelMatchTable, #channelTable, 
@@ -421,24 +425,16 @@ h2, span, label {
     max-height: none !important;
 }
 
-/* 分页控件样式 */
-#paginationContainer button {
-    width: 25px;
-    height: 20px;
-    margin: 0 2px;
-    padding: 0 0;
-    color: #aaaaaa;
-    background-color: #ffffff00;
-    cursor: pointer;
-    font-size: 15px;
+/* 分页栏样式 */
+.page-pagination-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 0 2px;
 }
-#paginationContainer button.active, 
-#paginationContainer button:hover {
-    color: rgb(0, 0, 0);
-}
-#paginationContainer button[disabled] {
-    color: #bbb;
-    cursor: not-allowed;
+
+.page-pagination-bar .layui-laypage {
+    margin: 0;
 }
 
 /* 自定义滚动条样式 */
@@ -619,17 +615,6 @@ body.dark .layui-btn-warm:hover {
     border-color: #ba7000;
 }
 
-body.dark #paginationContainer button {
-    background-color: #1e1e1e;
-    color: #aaa;
-}
-
-body.dark #paginationContainer button.active,
-body.dark #paginationContainer button:hover {
-    background-color: #333;
-    color: #fff;
-}
-
 body.dark #logTable th, body.dark #logTable td,
 body.dark #channelTable th,
 body.dark #iconTable th, body.dark #iconTable td,
@@ -800,12 +785,6 @@ body.dark .checkbox-label .ball {
     .live-source-modal-content table,
     .update-log-modal-content table {
         min-width: 900px;
-    }
-
-    #paginationContainer button {
-        width: 18px;
-        height: 16px;
-        font-size: 13px;
     }
 
     h2 {

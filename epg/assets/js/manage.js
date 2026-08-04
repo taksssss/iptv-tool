@@ -2,9 +2,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化 layui
     if (window.layui) {
-        layui.use(['layer', 'form'], function() {
+        layui.use(['layer', 'form', 'laypage'], function() {
             window._layer = layui.layer;
             window._form = layui.form;
+            window._laypage = layui.laypage;
             layui.form.render();
         });
     }
@@ -474,19 +475,38 @@ function updateEpgContent(epgData) {
 
 // 更新日志表格
 function updateLogTable(logData) {
-    var logTableBody = document.querySelector("#logTable tbody");
-    logTableBody.innerHTML = '';
+    const allData = Array.isArray(logData) ? logData : [];
+    const pageSize = 100;
 
-    logData.forEach(log => {
-        var row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${new Date(log.timestamp).toLocaleString('zh-CN').replace(' ', '<br>')}</td>
-            <td>${log.log_message}</td>
-        `;
-        logTableBody.appendChild(row);
-    });
-    var logTableContainer = document.getElementById("log-table-container");
-    logTableContainer.scrollTop = logTableContainer.scrollHeight;
+    function renderLogPage(pageNum) {
+        const start = (pageNum - 1) * pageSize;
+        const pageData = allData.slice(start, start + pageSize);
+        var logTableBody = document.querySelector("#logTable tbody");
+        logTableBody.innerHTML = '';
+        pageData.forEach(log => {
+            var row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${new Date(log.timestamp).toLocaleString('zh-CN').replace(' ', '<br>')}</td>
+                <td>${log.log_message}</td>
+            `;
+            logTableBody.appendChild(row);
+        });
+    }
+
+    renderLogPage(1);
+
+    if (window._laypage) {
+        window._laypage.render({
+            elem: 'logTablePage',
+            count: allData.length,
+            limit: pageSize,
+            curr: 1,
+            layout: ['prev', 'page', 'next', 'count'],
+            jump: function(obj, first) {
+                if (!first) renderLogPage(obj.curr);
+            }
+        });
+    }
 }
 
 // 更新 cron 日志内容
@@ -803,13 +823,14 @@ function loadAccessStats() {
         });
 }
 
-function renderAccessStatsTable() {
+function renderAccessStatsTable(pageNum) {
     const table = document.getElementById("accessStatsTable");
     const thead = table.querySelector("thead");
     const tbody = table.querySelector("tbody");
     const { ipData, dates } = cachedData;
 
     if (ipData.length === 0) {
+        thead.innerHTML = '';
         tbody.innerHTML = `<tr><td colspan="99">暂无数据</td></tr>`;
         return;
     }
@@ -833,11 +854,29 @@ function renderAccessStatsTable() {
         return order === 'asc' ? result : -result;
     });
 
+    const pageSize = 100;
+    const curr = pageNum || 1;
+    const start = (curr - 1) * pageSize;
+    const pageData = ipData.slice(start, start + pageSize);
+
     // 渲染表头
     thead.innerHTML = renderTableHeader(dates);
 
     // 渲染表体
-    tbody.innerHTML = ipData.map(row => renderTableRow(row)).join('');
+    tbody.innerHTML = pageData.map(row => renderTableRow(row)).join('');
+
+    if (window._laypage) {
+        window._laypage.render({
+            elem: 'accessStatsPage',
+            count: ipData.length,
+            limit: pageSize,
+            curr: curr,
+            layout: ['prev', 'page', 'next', 'count'],
+            jump: function(obj, first) {
+                if (!first) renderAccessStatsTable(obj.curr);
+            }
+        });
+    }
 }
 
 function renderTableHeader(dates) {
@@ -984,7 +1023,7 @@ function sortByColumn(col) {
             order: col === 'ip' ? 'asc' : 'desc'
         };
     }
-    renderAccessStatsTable();
+    renderAccessStatsTable(1);
 }
 
 // 清空访问日志
@@ -1091,42 +1130,60 @@ function updateIconList(iconsData) {
 
 // 显示频道绑定 EPG 列表
 function updateChannelBindEPGList(channelBindEPGData) {
-    // 创建并添加隐藏字段
-    const channelBindEPGInput = document.createElement('input');
-    channelBindEPGInput.type = 'hidden';
-    channelBindEPGInput.name = 'channel_bind_epg';
-    document.getElementById('settingsForm').appendChild(channelBindEPGInput);
+    // 创建并添加隐藏字段（避免重复添加）
+    let channelBindEPGInput = document.querySelector('input[name="channel_bind_epg"]');
+    if (!channelBindEPGInput) {
+        channelBindEPGInput = document.createElement('input');
+        channelBindEPGInput.type = 'hidden';
+        channelBindEPGInput.name = 'channel_bind_epg';
+        document.getElementById('settingsForm').appendChild(channelBindEPGInput);
+    }
 
     document.getElementById('channelBindEPGTable').dataset.allChannelBindEPG = JSON.stringify(channelBindEPGData);
-    var channelBindEPGTableBody = document.querySelector("#channelBindEPGTable tbody");
     var allChannelBindEPG = JSON.parse(document.getElementById('channelBindEPGTable').dataset.allChannelBindEPG);
     channelBindEPGInput.value = JSON.stringify(allChannelBindEPG);
 
-    // 清空现有表格
-    channelBindEPGTableBody.innerHTML = '';
+    const pageSize = 100;
 
-    allChannelBindEPG.forEach(channelbindepg => {
-        var row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${String(channelbindepg.epg_src)}</td>
-            <td contenteditable="true">${channelbindepg.channels}</td>
-        `;
-
-        row.querySelector('td[contenteditable]').addEventListener('input', function() {
-            channelbindepg.channels = this.textContent;
-            document.getElementById('channelBindEPGTable').dataset.allChannelBindEPG = JSON.stringify(allChannelBindEPG);
-            channelBindEPGInput.value = JSON.stringify(allChannelBindEPG);
+    function renderBindEPGPage(pageNum) {
+        var channelBindEPGTableBody = document.querySelector("#channelBindEPGTable tbody");
+        channelBindEPGTableBody.innerHTML = '';
+        const start = (pageNum - 1) * pageSize;
+        const pageData = allChannelBindEPG.slice(start, start + pageSize);
+        pageData.forEach((channelbindepg, idx) => {
+            const globalIdx = start + idx;
+            var row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${String(channelbindepg.epg_src)}</td>
+                <td contenteditable="true">${channelbindepg.channels}</td>
+            `;
+            row.querySelector('td[contenteditable]').addEventListener('input', function() {
+                allChannelBindEPG[globalIdx].channels = this.textContent;
+                document.getElementById('channelBindEPGTable').dataset.allChannelBindEPG = JSON.stringify(allChannelBindEPG);
+                channelBindEPGInput.value = JSON.stringify(allChannelBindEPG);
+            });
+            channelBindEPGTableBody.appendChild(row);
         });
+    }
 
-        channelBindEPGTableBody.appendChild(row);
-    });
+    renderBindEPGPage(1);
+
+    if (window._laypage) {
+        window._laypage.render({
+            elem: 'channelBindEPGPage',
+            count: allChannelBindEPG.length,
+            limit: pageSize,
+            curr: 1,
+            layout: ['prev', 'page', 'next', 'count'],
+            jump: function(obj, first) {
+                if (!first) renderBindEPGPage(obj.curr);
+            }
+        });
+    }
 }
 
 // 显示频道匹配结果
 function updateChannelMatchList(channelMatchdata) {
-    const channelMatchTableBody = document.querySelector("#channelMatchTable tbody");
-    channelMatchTableBody.innerHTML = '';
-
     const typeOrder = { '未匹配': 1, '反向模糊': 2, '正向模糊': 3, '别名/忽略': 4, '精确匹配': 5 };
 
     // 处理并排序匹配数据
@@ -1134,20 +1191,42 @@ function updateChannelMatchList(channelMatchdata) {
         .flat()
         .sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
 
-    // 创建表格行
-    sortedMatches.forEach(({ ori_channel, clean_channel, match, type }) => {
-        const matchType = type === '精确匹配' ? '' : type;
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${ori_channel}</td>
-            <td>${clean_channel}</td>
-            <td>${match || ''}</td>
-            <td>${matchType}</td>
-        `;
-        channelMatchTableBody.appendChild(row);
-    });
+    const pageSize = 100;
+
+    function renderMatchPage(pageNum) {
+        const channelMatchTableBody = document.querySelector("#channelMatchTable tbody");
+        channelMatchTableBody.innerHTML = '';
+        const start = (pageNum - 1) * pageSize;
+        const pageData = sortedMatches.slice(start, start + pageSize);
+        pageData.forEach(({ ori_channel, clean_channel, match, type }) => {
+            const matchType = type === '精确匹配' ? '' : type;
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${ori_channel}</td>
+                <td>${clean_channel}</td>
+                <td>${match || ''}</td>
+                <td>${matchType}</td>
+            `;
+            channelMatchTableBody.appendChild(row);
+        });
+    }
+
+    renderMatchPage(1);
 
     document.getElementById("channel-match-table-container").style.display = 'block';
+
+    if (window._laypage) {
+        window._laypage.render({
+            elem: 'channelMatchPage',
+            count: sortedMatches.length,
+            limit: pageSize,
+            curr: 1,
+            layout: ['prev', 'page', 'next', 'count'],
+            jump: function(obj, first) {
+                if (!first) renderMatchPage(obj.curr);
+            }
+        });
+    }
 }
 
 // 显示限定频道列表
@@ -1393,54 +1472,29 @@ function loadPageDataFromServer(page) {
         });
 }
 
-// 创建分页控件
-function setupPagination(data) {
-    const paginationContainer = document.getElementById('paginationContainer');
-    paginationContainer.innerHTML = ''; // 清空分页容器
+// 创建分页控件（使用 Layui laypage）
+function setupPagination() {
+    if (!window._laypage) return;
 
-    // 使用服务器端总数
     const totalItems = window.liveDataTotalCount || 0;
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    
-    if (totalPages <= 1) return;
-
-    const maxButtons = 11; // 总显示按钮数，包括“<”和“>”
-    const pageButtons = maxButtons - 2; // 除去 "<" 和 ">" 的按钮数
-
-    // 创建按钮
-    const createButton = (text, page, isActive = false, isDisabled = false) => {
-        const button = document.createElement('button');
-        button.textContent = text;
-        button.className = isActive ? 'active' : '';
-        button.disabled = isDisabled;
-        button.onclick = () => {
-            if (!isDisabled) {
-                currentPage = page;
-                displayPage(data, currentPage); // 更新页面显示内容
-                setupPagination(data); // 更新分页控件
-            }
-        };
-        return button;
-    };
-
-    // 前部
-    paginationContainer.appendChild(createButton('<', currentPage - 1, false, currentPage === 1));
-    paginationContainer.appendChild(createButton(1, 1, currentPage === 1));
-    if (currentPage > 5 && totalPages > pageButtons) paginationContainer.appendChild(createButton('...', null, false, true));
-
-    // 中部
-    let startPage = Math.max(2, currentPage - Math.floor(pageButtons / 2) + 2);
-    let endPage = Math.min(totalPages - 1, currentPage + Math.floor(pageButtons / 2) - 2);
-    if (currentPage <= 5) { startPage = 2; endPage = Math.min(pageButtons - 2, totalPages - 1); }
-    else if (currentPage >= totalPages - 4) { startPage = Math.max(totalPages - pageButtons + 3, 2); endPage = totalPages - 1; }
-    for (let i = startPage; i <= endPage; i++) {
-        paginationContainer.appendChild(createButton(i, i, currentPage === i));
+    if (totalItems <= rowsPerPage) {
+        document.getElementById('paginationContainer').innerHTML = '';
+        return;
     }
 
-    // 后部
-    if (currentPage < totalPages - 4 && totalPages > pageButtons) paginationContainer.appendChild(createButton('...', null, false, true));
-    paginationContainer.appendChild(createButton(totalPages, totalPages, currentPage === totalPages));
-    paginationContainer.appendChild(createButton('>', currentPage + 1, false, currentPage === totalPages));
+    window._laypage.render({
+        elem: 'paginationContainer',
+        count: totalItems,
+        limit: rowsPerPage,
+        curr: currentPage,
+        layout: ['prev', 'page', 'next', 'count'],
+        jump: function(obj, first) {
+            if (!first) {
+                currentPage = obj.curr;
+                displayPage(filteredLiveData, currentPage);
+            }
+        }
+    });
 }
 
 let currentPage = 1; // 当前页码
@@ -1456,7 +1510,7 @@ document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => {
     localStorage.setItem('rowsPerPage', rowsPerPage);
     currentPage = 1; // 重置到第一页
     displayPage(filteredLiveData, currentPage);
-    setupPagination(filteredLiveData);
+    setupPagination();
 });
 
 // 优化搜索框中文输入
@@ -1546,7 +1600,7 @@ function updateLiveSourceModal(data) {
     
     filteredLiveData = allLiveData; // 初始化过滤结果
     displayPage(filteredLiveData, currentPage); // 显示当前页数据
-    setupPagination(filteredLiveData); // 初始化分页控件
+    setupPagination(); // 初始化分页控件
 }
 
 // 更新直播源配置
@@ -1999,14 +2053,15 @@ function saveLiveTemplate() {
 // 搜索频道
 function filterChannels(type) {
     const tableId = type === 'channel' ? 'channelTable' : 'iconTable';
+    const pageContainerId = type === 'channel' ? 'channelTablePage' : 'iconTablePage';
     const dataAttr = type === 'channel' ? 'allChannels' : 'allIcons';
     const input = document.getElementById(type === 'channel' ? 'channelSearchInput' : 'iconSearchInput').value.toUpperCase();
     const tableBody = document.querySelector(`#${tableId} tbody`);
     const allData = JSON.parse(document.getElementById(tableId).dataset[dataAttr]);
 
-    tableBody.innerHTML = ''; // 清空表格
+    const pageSize = 100;
 
-    // 创建行的通用函数
+    // 构建 icon 新行（仅用于 icon 无搜索时）
     function createEditableRow(item, itemIndex, insertAfterRow = null) {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -2026,7 +2081,7 @@ function filterChannels(type) {
                 document.getElementById(tableId).dataset[dataAttr] = JSON.stringify(allData);
                 if (cell.getAttribute('name') === 'channel' && item.channel && !allData.some(e => !e.channel)) {
                     allData.push({ channel: '', icon: '' });
-                    createEditableRow(allData[allData.length - 1], allData.length - 1, row); // 插入新行到当前行后
+                    createEditableRow(allData[allData.length - 1], allData.length - 1, row);
                 }
             });
         });
@@ -2034,7 +2089,6 @@ function filterChannels(type) {
         // 上传文件
         row.querySelector(`#icon_new_${itemIndex}`).addEventListener('change', event => handleIconFileUpload(event, item, row, allData));
 
-        // 如果指定了插入位置，则插入到该行之后，否则追加到表格末尾
         if (insertAfterRow) {
             insertAfterRow.insertAdjacentElement('afterend', row);
         } else {
@@ -2042,16 +2096,31 @@ function filterChannels(type) {
         }
     }
 
-    // 创建初始空行（仅用于 icon）
-    if (!input && type === 'icon') {
-        allData.push({ channel: '', icon: '' });
-        createEditableRow(allData[allData.length - 1], allData.length - 1);
-    }
+    // 筛选匹配行（保留原始索引供编辑绑定使用）
+    const filteredItems = [];
+    // icon 类型在无搜索时追加一个空行
+    const isIconNoSearch = !input && type === 'icon';
 
-    // 筛选并显示行的逻辑
     allData.forEach((item, index) => {
         const searchText = type === 'channel' ? item.original : item.channel;
         if (String(searchText).toUpperCase().includes(input)) {
+            filteredItems.push({ item, index });
+        }
+    });
+
+    function renderPage(pageNum) {
+        tableBody.innerHTML = '';
+
+        // icon 无搜索时在首页显示新建行
+        if (isIconNoSearch && pageNum === 1) {
+            allData.push({ channel: '', icon: '' });
+            createEditableRow(allData[allData.length - 1], allData.length - 1);
+        }
+
+        const start = (pageNum - 1) * pageSize;
+        const pageData = filteredItems.slice(start, start + pageSize);
+
+        pageData.forEach(({ item, index }) => {
             const row = document.createElement('tr');
             if (type === 'channel') {
                 row.innerHTML = `<td class="blue-span" 
@@ -2062,7 +2131,7 @@ function filterChannels(type) {
                     item.mapped = this.textContent.trim();
                     document.getElementById(tableId).dataset[dataAttr] = JSON.stringify(allData);
                 });
-            } else if (type === 'icon' && searchText) {
+            } else if (type === 'icon' && item.channel) {
                 row.innerHTML = `
                     <td contenteditable="true">${item.channel}</td>
                     <td contenteditable="true">${item.icon || ''}</td>
@@ -2074,16 +2143,31 @@ function filterChannels(type) {
                 `;
                 row.querySelectorAll('td[contenteditable]').forEach((cell, idx) => {
                     cell.addEventListener('input', function() {
-                        if (idx === 0) item.channel = this.textContent.trim();  // 第一个可编辑单元格更新 channel
-                        else item.icon = this.textContent.trim();  // 第二个可编辑单元格更新 icon
+                        if (idx === 0) item.channel = this.textContent.trim();
+                        else item.icon = this.textContent.trim();
                         document.getElementById(tableId).dataset[dataAttr] = JSON.stringify(allData);
                     });
                 });
                 row.querySelector(`#file_${index}`).addEventListener('change', event => handleIconFileUpload(event, item, row, allData));
             }
             tableBody.appendChild(row);
-        }
-    });
+        });
+    }
+
+    renderPage(1);
+
+    if (window._laypage) {
+        window._laypage.render({
+            elem: pageContainerId,
+            count: filteredItems.length,
+            limit: pageSize,
+            curr: 1,
+            layout: ['prev', 'page', 'next', 'count'],
+            jump: function(obj, first) {
+                if (!first) renderPage(obj.curr);
+            }
+        });
+    }
 }
 
 // 台标上传

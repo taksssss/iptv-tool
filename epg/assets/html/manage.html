@@ -345,8 +345,8 @@
             </div>
             <div class="page-body">
                 <div class="table-container" id="log-table-container">
-                    <table id="logTable">
-                        <thead style="position: sticky; top: 0; background-color: white;">
+                    <table id="logTable" class="layui-table-box">
+                        <thead>
                             <tr>
                                 <th>时间</th>
                                 <th>描述</th>
@@ -355,6 +355,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="logTablePage" class="page-pagination-bar"></div>
             </div>
         </section>
 
@@ -394,13 +395,14 @@
             </div>
             <div class="page-body">
                 <div id="accessStatsTableWrapper" style="overflow:auto;max-width:100%;">
-                    <div class="table-container" id="access-stats-table-container" style="height: calc(100vh - 220px);">
+                    <div class="table-container" id="access-stats-table-container">
                         <table id="accessStatsTable">
                             <thead></thead>
                             <tbody></tbody>
                         </table>
                     </div>
                 </div>
+                <div id="accessStatsPage" class="page-pagination-bar"></div>
             </div>
         </section>
 
@@ -425,6 +427,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="channelTablePage" class="page-pagination-bar"></div>
                 <br>
                 <button id="saveChannelConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateChannelMapping();">保存配置</button>
             </div>
@@ -456,6 +459,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="iconTablePage" class="page-pagination-bar"></div>
                 <br>
                 <button id="saveIconConfig" type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateIconListJsonFile(notify = true);">保存配置</button>
             </div>
@@ -479,6 +483,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="channelBindEPGPage" class="page-pagination-bar"></div>
                 <br>
                 <button type="button" class="layui-btn layui-btn-warm layui-btn-fluid" onclick="updateConfig();">保存配置</button>
             </div>
@@ -504,6 +509,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div id="channelMatchPage" class="page-pagination-bar"></div>
             </div>
         </section>
 
@@ -576,9 +582,9 @@
                     </table>
                 </div>
                 <!-- 分页控件 -->
-                <div style="margin-top: 15px; display: flex; align-items: center;">
+                <div style="margin-top: 8px; display: flex; align-items: center;">
                     <div style="flex: 1;"></div>
-                    <div id="paginationContainer" style="text-align: center;"></div>
+                    <div id="paginationContainer" class="page-pagination-bar" style="text-align: center;"></div>
                     <div style="flex: 1; text-align: right;">
                         <select id="rowsPerPageSelect">
                             <option value="50">50 条</option>
