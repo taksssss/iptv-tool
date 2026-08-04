@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 新用户弹出使用说明
     if (!localStorage.getItem('hasVisitedBefore') && 
         (!document.getElementById('xml_urls')?.value.trim())) {
-        showHelpModal();
+        showVersionLog(doCheckUpdate = 1);
+        showPage('help');
         localStorage.setItem('hasVisitedBefore', 1);
     }
 
@@ -188,6 +189,55 @@ function openModal(modal) {
     };
 }
 
+// SPA 页面切换：显示独立页面视图
+function showPage(type) {
+    // 隐藏主内容
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.style.display = 'none';
+    // 隐藏所有 page-view
+    document.querySelectorAll('.page-view').forEach(el => el.style.display = 'none');
+    // 显示目标 page-view
+    const pageEl = document.getElementById('page-' + type);
+    if (pageEl) pageEl.style.display = 'flex';
+    // 移动端关闭侧边栏
+    closeSidebarMobile();
+}
+
+// 关闭独立页面，恢复主内容
+function closePage() {
+    document.querySelectorAll('.page-view').forEach(el => el.style.display = 'none');
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.style.display = '';
+}
+
+// 移动端侧边栏自动关闭
+function closeSidebarMobile() {
+    if (window.innerWidth <= 1100) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.remove('open');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+}
+
+// 侧边栏二级菜单折叠/展开
+function toggleNavGroup(btn) {
+    const group = btn.closest('.nav-group');
+    if (!group) return;
+    const sub = group.querySelector('.nav-sub');
+    const chevron = btn.querySelector('.nav-chevron');
+    const isOpen = group.classList.contains('open');
+    if (isOpen) {
+        group.classList.remove('open');
+        if (sub) sub.style.maxHeight = '0';
+        if (chevron) chevron.style.transform = '';
+    } else {
+        group.classList.add('open');
+        if (sub) sub.style.maxHeight = sub.scrollHeight + 'px';
+        if (chevron) chevron.style.transform = 'rotate(90deg)';
+    }
+}
+
 // 显示带消息的模态框
 function showModalWithMessage(modalId, messageId = '', message = '') {
     const modal = document.getElementById(modalId);
@@ -204,7 +254,7 @@ function showMessageModal(message) {
 }
 
 let zIndex = 100;
-// 显示模态框公共函数
+// 显示模态框公共函数（保留小型弹窗；大型页面路由到 showPage）
 function showModal(type, popup = true, data = '') {
     var modal, logSpan, logContent;
     switch (type) {
@@ -228,36 +278,41 @@ function showModal(type, popup = true, data = '') {
             break;
 
         case 'update':
-            modal = document.getElementById("updatelogModal");
             fetchData('manage.php?get_update_logs=1', updateLogTable);
-            break;
+            if (!popup) return;
+            showPage('update');
+            return;
         case 'cron':
-            modal = document.getElementById("cronlogModal");
             fetchData('manage.php?get_cron_logs=1', updateCronLogContent);
-            break;
+            if (!popup) return;
+            showPage('cron');
+            return;
         case 'channel':
-            modal = document.getElementById("channelModal");
             fetchData('manage.php?get_channel=1', updateChannelList);
-            break;
+            if (!popup) return;
+            showPage('channel');
+            return;
         case 'icon':
-            modal = document.getElementById("iconModal");
             fetchData('manage.php?get_icon=1', updateIconList);
-            break;
+            if (!popup) return;
+            showPage('icon');
+            return;
         case 'allicon':
-            modal = document.getElementById("iconModal");
             fetchData('manage.php?get_icon=1&get_all_icon=1', updateIconList);
-            break;
+            if (!popup) return;
+            showPage('icon');  // allicon uses same page-view as icon
+            return;
         case 'channelbindepg':
-            modal = document.getElementById("channelBindEPGModal");
             fetchData('manage.php?get_channel_bind_epg=1', updateChannelBindEPGList);
-            break;
+            if (!popup) return;
+            showPage('channelbindepg');
+            return;
         case 'channelmatch':
-            modal = document.getElementById("channelMatchModal");
             fetchData('manage.php?get_channel_match=1', updateChannelMatchList);
-            break;
+            if (!popup) return;
+            showPage('channelmatch');
+            return;
         case 'live':
-            modal = document.getElementById("liveSourceManageModal");
-            // 重置数据并加载第一页
             allLiveData = [];
             filteredLiveData = [];
             currentPage = 1;
@@ -265,22 +320,27 @@ function showModal(type, popup = true, data = '') {
             window.loadedPages = new Set();
             window.pageDataMap = new Map();
             window.clientModifiedTags = new Set();
-            window.currentSearchKeyword = ''; // 清除搜索关键词
+            window.currentSearchKeyword = '';
             fetchData(`manage.php?get_live_data=1&page=1&per_page=${rowsPerPage}`, updateLiveSourceModal);
-            break;
+            if (!popup) return;
+            showPage('live');
+            return;
         case 'chekspeed':
-            modal = document.getElementById("checkSpeedModal");
-            break;
+            if (!popup) return;
+            showPage('chekspeed');
+            return;
         case 'morelivesetting':
-            modal = document.getElementById("moreLiveSettingModal");
-            break;
+            if (!popup) return;
+            showPage('morelivesetting');
+            return;
         case 'moresetting':
-            modal = document.getElementById("moreSettingModal");
             fetchData('manage.php?get_gen_list=1', updateGenList);
-            break;
+            if (!popup) return;
+            showPage('moresetting');
+            return;
         default:
             console.error('Unknown type:', type);
-            break;
+            return;
     }
     if (!popup) {
         return;
@@ -363,8 +423,10 @@ function showVersionLog(doCheckUpdate = 0) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                const el = document.getElementById('versionLogMessage');
+                if (el) el.innerHTML = data.content;
                 if (!doCheckUpdate || data.is_updated) {
-                    showModalWithMessage("versionLogModal", "versionLogMessage", data.content);
+                    showPage('versionlog');
                 }
             } else {
                 showMessageModal(data.message || '获取版本日志失败');
@@ -380,7 +442,9 @@ function showHelpModal() {
     fetch("manage.php?get_readme_content=1")
         .then(response => response.json())
         .then(data => {
-            showModalWithMessage("helpModal", "helpMessage", data.content);
+            const el = document.getElementById('helpMessage');
+            if (el) el.innerHTML = data.content;
+            showPage('help');
         });
 }
 
@@ -661,20 +725,21 @@ function showAccessLogModal() {
         }
     };
     
-    modal.style.zIndex = zIndex++;
-    modal.style.display = "block";
+    showPage('accesslog');
     loadInitial();
-    document.body.style.overflow = "hidden";
 
-    modal.onmousedown = e => {
-        if (e.target === modal || e.target.classList.contains("close")) {
-            document.body.style.overflow = "auto";
-            modal.style.display = "none";
+    // 关闭页面时清理计时器
+    const pageEl = document.getElementById('page-accesslog');
+    const backBtn = pageEl ? pageEl.querySelector('.page-back-btn') : null;
+    if (backBtn) {
+        const origOnClick = backBtn.onclick;
+        backBtn.onclick = function() {
             clearInterval(accessLogTimer);
             accessLogTimer = null;
             box.onscroll = null;
-        }
-    };
+            closePage();
+        };
+    }
 }
 
 // 格式化日志行
@@ -704,25 +769,17 @@ let currentSourceOnly = 0;
 function showAccessStats(sourceOnly = 0) {
     currentSourceOnly = sourceOnly;
 
-    const modal = document.getElementById("accessStatsModal");
-    const title = modal.querySelector("h2");
-    title.textContent = sourceOnly ? "直播源访问统计" : "访问统计";
+    const pageEl = document.getElementById('page-accessstats');
+    if (pageEl) {
+        const title = pageEl.querySelector('.page-header h2');
+        if (title) title.textContent = sourceOnly ? "直播源访问统计" : "访问统计";
+    }
 
     clearInterval(accessLogTimer);
     accessLogTimer = null;
 
-    modal.style.zIndex = zIndex++;
-    modal.style.display = "block";
+    showPage('accessstats');
     loadAccessStats();
-    document.body.style.overflow = "hidden";
-
-    modal.onmousedown = e => {
-        if (e.target === modal || e.target.classList.contains("close")) {
-            modal.style.display = "none";
-            document.body.style.overflow = "auto";
-            showAccessLogModal();
-        }
-    };
 }
 
 let currentSort = { column: 'total', order: 'desc' };
@@ -1703,7 +1760,7 @@ function cleanUnusedSource() {
     .then(data => {
         if (data.success) {
             parseSourceInfo(data.message);
-            document.getElementById('moreLiveSettingModal').style.display = 'none';
+            showPage('live');
         } else {
             showMessageModal('清理失败');
         }
@@ -1897,7 +1954,7 @@ document.addEventListener('click', function(e) {
 
 // 显示直播源模板
 function showLiveTemplate() {
-    showModalWithMessage("liveTemplateModal");
+    showPage('livetemplate');
 }
 
 // 保存编辑后的直播源模板
@@ -1929,7 +1986,7 @@ function saveLiveTemplate() {
     .then(data => {
         if (data.success) {
             parseSourceInfo("保存成功<br>正在重新解析...");
-            document.getElementById('liveTemplateModal').style.display = 'none';
+            showPage('live');
         } else {
             showMessageModal('保存失败');
         }
@@ -2565,7 +2622,10 @@ function updateCheckSpeedFilterRules() {
 
 // 监听 access_log_enable 更变
 function accessLogEnable(selectElem) {
-    document.getElementById("accessLogBtn").style.display = selectElem.value === "1" ? "inline-block" : "none";
+    const show = selectElem.value === "1" ? "inline-block" : "none";
+    document.getElementById("accessLogBtn").style.display = show;
+    const sideBtn = document.getElementById("accessLogSideBtn");
+    if (sideBtn) sideBtn.style.display = show;
 }
 
 // 页面加载时恢复大小
