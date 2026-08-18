@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录</title>
     <link rel="stylesheet" type="text/css" href="assets/css/login.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.min.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -13,37 +14,64 @@
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         document.body.classList.add(savedTheme);
-    } else {
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.body.classList.add('dark');
-        }
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
     }
 })();
 </script>
-<div class="container">
-    <h2>登录</h2>
-    <form method="POST">
-        <label for="password">管理密码：</label><br><br>
-        <input type="password" id="password" name="password"><br><br>
-        <input type="hidden" name="login" value="1">
-        <input type="submit" value="登录">
-    </form>
-    <div class="button-container">
-        <button type="button" onclick="showChangePasswordForm()">更改密码</button>
-    </div>
-    <?php if (!empty($error)) echo "<p style='color:red;'>$error</p>"; ?>
-    <?php echo $passwordChangedMessage; ?>
-    <?php echo $passwordChangeErrorMessage; ?>
+<div class="login-shell">
+    <section class="login-brand-panel">
+        <div class="brand-mark">
+            <span>TV</span>
+        </div>
+        <span class="brand-tag">IPTV TOOL</span>
+        <h1>IPTV 工具箱管理系统</h1>
+        <p>面向移动端与 PC 的统一管理入口，集中维护节目单、直播源、台标与访问控制。</p>
+        <div class="brand-metrics">
+            <div class="metric-card">
+                <strong>EPG</strong>
+                <span>节目单管理</span>
+            </div>
+            <div class="metric-card">
+                <strong>LIVE</strong>
+                <span>直播源聚合</span>
+            </div>
+            <div class="metric-card">
+                <strong>LOGO</strong>
+                <span>台标与映射</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="login-panel">
+        <div class="login-card">
+            <div class="login-card-header">
+                <span class="login-badge">欢迎登录</span>
+                <h2>后台管理</h2>
+                <p>请输入管理密码进入控制台。</p>
+            </div>
+            <form method="POST" class="layui-form login-form">
+                <label for="password">管理密码</label>
+                <input type="password" class="layui-input" id="password" name="password" placeholder="请输入管理密码">
+                <input type="hidden" name="login" value="1">
+                <input type="submit" class="layui-btn layui-btn-fluid layui-btn-warm login-submit" value="登录">
+            </form>
+            <div class="button-container">
+                <button type="button" class="layui-btn layui-btn-primary layui-btn-fluid" onclick="showChangePasswordForm()">更改密码</button>
+            </div>
+            <?php if (!empty($error)) echo "<p class='state-message error'>$error</p>"; ?>
+            <?php echo $passwordChangedMessage ? "<p class='state-message success'>密码已更改</p>" : ''; ?>
+            <?php echo !empty($passwordChangeError) ? "<p class='state-message error'>$passwordChangeError</p>" : ''; ?>
+        </div>
+    </section>
 </div>
 
-<!-- 底部显示 -->
 <div class="footer">
-    <a href="https://github.com/taksssss/iptv-tool" target="_blank" style="color: #888; text-decoration: none;">
+    <a href="https://github.com/taksssss/iptv-tool" target="_blank">
         https://github.com/taksssss/iptv-tool
     </a>
 </div>
 
-<!-- 修改密码模态框 -->
 <div id="changePasswordModal" class="modal">
     <div class="passwd-modal-content">
         <span class="close">&times;</span>
@@ -52,19 +80,19 @@
             <?php if (empty($forceChangePassword)): ?>
             <div class="form-group">
                 <label for="old_password">原密码</label>
-                <input type="password" id="old_password" name="old_password">
+                <input type="password" class="layui-input" id="old_password" name="old_password">
             </div>
             <?php endif; ?>
             <div class="form-group">
                 <label for="new_password">新密码</label>
-                <input type="password" id="new_password" name="new_password">
+                <input type="password" class="layui-input" id="new_password" name="new_password">
             </div>
             <div class="form-group">
-                <label for="confirm_password">确　认</label>
-                <input type="password" id="confirm_password" name="confirm_password">
+                <label for="confirm_password">确认密码</label>
+                <input type="password" class="layui-input" id="confirm_password" name="confirm_password">
             </div>
             <input type="hidden" name="change_password" value="1">
-            <input type="submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>" style="margin-top: 15px;">
+            <input type="submit" class="layui-btn layui-btn-fluid layui-btn-warm login-submit" value="<?= !empty($forceChangePassword) ? "设置密码" : "更改密码" ?>">
         </form>
     </div>
 </div>
@@ -91,7 +119,7 @@
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
         if (newPassword !== confirmPassword) {
-            alert('两次输入密码不一致！'); // 提示也尽量简洁
+            alert('两次输入密码不一致！');
             return false;
         }
         return true;
@@ -99,5 +127,6 @@
 
     <?php if (!empty($forceChangePassword)) echo "showChangePasswordForm();"; ?>
 </script>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.min.js"></script>
 </body>
 </html>
