@@ -364,8 +364,16 @@ function liveFetchHandler($query_params) {
 function scriptHandler($query_params) {
     global $scriptsDir;
 
+    $scriptsRoot = realpath($scriptsDir);
     $scriptPath = $scriptsDir . ($query_params['url'] ?? '');
-    if (!is_file($scriptPath)) {
+    $resolvedScriptPath = realpath($scriptPath);
+    if (
+        $scriptsRoot === false ||
+        $resolvedScriptPath === false ||
+        !is_file($resolvedScriptPath) ||
+        strpos($resolvedScriptPath, $scriptsRoot . DIRECTORY_SEPARATOR) !== 0 ||
+        strtolower(pathinfo($resolvedScriptPath, PATHINFO_EXTENSION)) !== 'php'
+    ) {
         http_response_code(404);
         exit('脚本不存在');
     }
@@ -374,7 +382,7 @@ function scriptHandler($query_params) {
     header('Pragma: no-cache');
 
     ob_start();
-    include $scriptPath;
+    include $resolvedScriptPath;
     echo ob_get_clean();
     exit;
 }
