@@ -365,8 +365,10 @@ function scriptHandler($query_params) {
     global $scriptsDir;
 
     $scriptsRoot = realpath($scriptsDir);
-    $scriptPath = $scriptsDir . ($query_params['url'] ?? '');
-    $resolvedScriptPath = realpath($scriptPath);
+    $scriptUrl = $query_params['url'] ?? '';
+    $resolvedScriptPath = $scriptsRoot !== false && is_string($scriptUrl)
+        ? realpath($scriptsRoot . DIRECTORY_SEPARATOR . $scriptUrl)
+        : false;
     if (
         $scriptsRoot === false ||
         $resolvedScriptPath === false ||
