@@ -42,7 +42,8 @@ RUN apk --no-cache --update \
     php83-xmlwriter \
     php83-posix \
     php83-zip \
-    && mkdir -p /htdocs /run/nginx
+    && mkdir -p /htdocs /run/nginx \
+    && ln -sf /usr/bin/php83 /usr/bin/php
 
 # 复制 ./epg 文件夹内容到 /htdocs
 COPY ./epg /htdocs

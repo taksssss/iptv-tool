@@ -20,10 +20,11 @@ echo 'Updating configurations'
 
 # Optional ffmpeg installation
 if [ "$ENABLE_FFMPEG" = "true" ]; then
-    echo "Using USTC mirror for package installation..."
+    echo "Using Aliyun mirror for package installation..."
     sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-    if ! apk info ffmpeg > /dev/null 2>&1; then
+    if ! command -v ffmpeg >/dev/null 2>&1; then
         echo "Installing ffmpeg..."
+        apk update
         apk add --no-cache ffmpeg
     else
         echo "ffmpeg is already installed."
