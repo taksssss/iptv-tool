@@ -189,9 +189,10 @@ echo 'Running crond.php, php-fpm and nginx'
 
 # Change ownership of /htdocs
 chown -R nginx:nginx /htdocs
+chmod 755 /htdocs
 
 # Change session directory permissions
-chmod 1733 /tmp
+chmod 1777 /tmp
 
 # Run crond.php as nginx user
 if [ -f /htdocs/crond.php ]; then
